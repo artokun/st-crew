@@ -1,0 +1,48 @@
+{
+  "name": "@spacetradersapi/rt-sdk",
+  "version": "0.0.2",
+  "description": "SDK for the Real-time Spacetraders API",
+  "main": "dist/index.js",
+  "module": "dist/index.m.js",
+  "unpkg": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/artokun/st-ws-crew-test"
+  },
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "require": "./dist/index.js",
+    "default": "./dist/index.modern.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "npx tsx watch src/examples/client.ts",
+    "build": "npm run lint && rm -rf dist && microbundle --tsconfig tsconfig.json --no-sourcemap",
+    "publish": "npm publish --access public",
+    "prepublish": "npm run build",
+    "patch": "npm version patch && npm run build && npm run publish",
+    "minor": "npm version minor && npm run build && npm run publish",
+    "major": "npm version major && npm run build && npm run publish",
+    "lint": "cd ../../ eslint --fix --ext .ts src && tsc --noEmit"
+  },
+  "keywords": [
+    "spacetraders",
+    "api",
+    "sdk"
+  ],
+  "author": "art@spacetraders.io",
+  "license": "ISC",
+  "devDependencies": {
+    "eventemitter3": "5.0.1",
+    "flatbuffers": "^23.5.26",
+    "microbundle": "^0.15.1"
+  },
+  "dependencies": {
+    "@types/ws": "^8.5.10",
+    "isomorphic-ws": "^5.0.0"
+  }
+}
