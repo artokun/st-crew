@@ -20,8 +20,9 @@ fn receive_message(mut commands: Commands, connections: Query<(Entity, &WsConnec
                         let message = message::root_as_message(&data).unwrap();
                         match message.message_type() {
                             MessageType::RequestServerStatEvent => {
-                                conn.send(server_stat_event::buffer(connections.iter().count()
-                                    as u32));
+                                conn.send(WSMessage::binary(server_stat_event::buffer(
+                                    connections.iter().count() as u32,
+                                )));
                             }
                             MessageType::NoOpEvent => {
                                 conn.send(WSMessage::text("Welcome to ST-RT-API"));
