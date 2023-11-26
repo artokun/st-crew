@@ -1,14 +1,8 @@
 use async_tungstenite::tungstenite::protocol::Message as WSMessage;
 use bevy::prelude::*;
 use bevy_ws_server::{ReceiveError, WsConnection, WsListener, WsPlugin};
-
-#[allow(dead_code, unused_imports)]
-#[path = "generated/message_generated.rs"]
-mod message_generated;
-use message_generated::message::{ self, MessageType };
-
-#[path = "messages/server_stat_event.rs"]
-mod server_stat_event;
+use crate::generated::message_generated::message::{ self, MessageType };
+use crate::messages::server_stat_event;
 
 fn startup_socket_listener(listener: Res<WsListener>) {
     listener.listen("127.0.0.1:8080");

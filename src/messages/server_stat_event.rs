@@ -1,10 +1,6 @@
 
 use async_tungstenite::tungstenite::protocol::Message as WSMessage;
-
-#[allow(dead_code, unused_imports)]
-#[path = "../generated/message_generated.rs"]
-mod message_generated;
-pub use message_generated::message::{
+use crate::generated::message_generated::message::{
     Message, MessageArgs, MessageType, ServerStatEvent, ServerStatEventArgs,
 };
 

@@ -1,4 +1,6 @@
 mod sockets;
+mod messages;
+mod generated;
 
 use bevy::prelude::*;
 use sockets::WebSocketPlugin;
