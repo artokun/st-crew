@@ -1,0 +1,13 @@
+namespace client;
+
+enum ClientAction : byte {
+  Joined,
+  Left
+}
+
+table Client {
+  id: string;
+  name: string;
+}
+
+root_type Client;

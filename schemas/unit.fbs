@@ -1,0 +1,19 @@
+include "shared.fbs";
+
+namespace unit;
+
+enum UnitState : byte {
+  Idle,
+  Moving
+}
+
+// Game Tables
+table Unit {
+  id: uint;
+  name: string;
+  controlled_by: string;
+  state: UnitState = 0;
+  position: shared.Vec2;
+}
+
+root_type Unit;
