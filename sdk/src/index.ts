@@ -101,4 +101,14 @@ export class SpaceTradersRT extends EventEmitter {
   }
 }
 
+// reexport the MessageType enum so that it can be used in the client with string literals as the keys
+export const MessageTypes = Array.from(Object.keys(MessageType)).reduce(
+  (acc, key) => {
+    // @ts-expect-error
+    acc[key] = key;
+    return acc;
+  },
+  {} as { [key in keyof typeof MessageType]: key }
+);
+
 export default SpaceTradersRT;

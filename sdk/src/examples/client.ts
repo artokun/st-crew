@@ -1,4 +1,4 @@
-import SDK from "../index";
+import SDK, { MessageTypes } from "../index";
 
 const sdk = new SDK();
 
@@ -7,7 +7,7 @@ sdk.on("connect", () => {
   sdk.getServerStats();
 });
 
-sdk.on("ServerStatEvent", (data) => {
+sdk.on(MessageTypes.ServerStatEvent, (data) => {
   console.log("ServerStatEventT:", data);
 });
 
