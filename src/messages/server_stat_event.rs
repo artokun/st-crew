@@ -1,6 +1,6 @@
 
 use async_tungstenite::tungstenite::protocol::Message as WSMessage;
-use crate::generated::message_generated::message::{
+use crate::generated::message::{
     Message, MessageArgs, MessageType, ServerStatEvent, ServerStatEventArgs,
 };
 

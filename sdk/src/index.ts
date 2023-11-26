@@ -15,30 +15,53 @@ type StaticPayloads = {
 
 type MessagePayloads = DynamicPayloads & StaticPayloads;
 
+/**
+ * Represents the SpaceTradersRT class that extends EventEmitter.
+ * This class provides functionality for connecting to a WebSocket server and sending/receiving messages.
+ */
 export class SpaceTradersRT extends EventEmitter {
   private url: string;
   private ws: WebSocket | null;
 
+  /**
+   * Constructs a new instance of the SpaceTradersRT class.
+   * Initializes the URL and WebSocket properties.
+   */
   constructor() {
     super();
     this.url = 'ws://localhost:8080';
     this.ws = null;
   }
 
+  /**
+   * Emits an event with an optional payload.
+   * @param event - The event to emit.
+   * @param payload - The payload associated with the event.
+   * @returns A boolean indicating if the event was emitted successfully.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public emit<K extends keyof typeof MessageType>(event: K | string | symbol, payload?: any): boolean {
     return super.emit(event, payload);
   }
 
+  /**
+   * Registers an event listener for the specified event.
+   * @param event - The event to listen for.
+   * @param listener - The listener function to be called when the event is emitted.
+   * @returns The current instance of the SpaceTradersRT class.
+   */
   public on<K extends keyof typeof MessageType>(
     event: K | string | symbol,
     // @ts-expect-error - this is a hack to get the payload type to be strongly typed
     listener: (payload: MessagePayloads[K]) => void
   ): this {
-    // Now the event type and payload type are strongly coupled
     return super.on(event, listener);
   }
 
+  /**
+   * Connects to the WebSocket server.
+   * @returns A promise that resolves when the connection is established.
+   */
   async connect() {
     this.ws = new WebSocket(this.url);
 
@@ -73,6 +96,9 @@ export class SpaceTradersRT extends EventEmitter {
     });
   }
 
+  /**
+   * Sends a request to get the server statistics.
+   */
   public getServerStats() {
     const builder = new flatbuffers.Builder(1);
     const event = RequestServerStatEvent.createRequestServerStatEvent(builder);
@@ -81,10 +107,17 @@ export class SpaceTradersRT extends EventEmitter {
     this.send(builder.asUint8Array());
   }
 
+  /**
+   * Sends data to the WebSocket server.
+   * @param data - The data to send.
+   */
   private send(data: Uint8Array) {
     this.ws?.send(data);
   }
 
+  /**
+   * Disconnects from the WebSocket server.
+   */
   private disconnect() {
     this.ws?.close();
   }

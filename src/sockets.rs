@@ -1,7 +1,7 @@
 use async_tungstenite::tungstenite::protocol::Message as WSMessage;
 use bevy::prelude::*;
 use bevy_ws_server::{ReceiveError, WsConnection, WsListener, WsPlugin};
-use crate::generated::message_generated::message::{ self, MessageType };
+use crate::generated::message::{ self, MessageType };
 use crate::messages::server_stat_event;
 
 fn startup_socket_listener(listener: Res<WsListener>) {
