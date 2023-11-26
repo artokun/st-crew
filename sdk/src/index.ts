@@ -1,7 +1,7 @@
 import EventEmitter from 'eventemitter3';
 import WebSocket from 'isomorphic-ws';
 import * as flatbuffers from 'flatbuffers';
-import { Message, MessageType, RequestServerStatEvent, ServerStatEventT } from './models/message';
+import { Message, MessageType, RequestServerStatEvent, ServerStatEventT } from './generated/message';
 
 type DynamicPayloads = {
   ServerStatEvent: ServerStatEventT;

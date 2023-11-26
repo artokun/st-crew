@@ -1,8 +1,9 @@
-mod generated;
+use bevy::prelude::*;
+
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod messages;
 mod sockets;
 
-use bevy::prelude::*;
 use sockets::WebSocketPlugin;
 
 fn main() {

@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 # Remember to revert this before releasing your game!
-bevy = { version = "0.12.0", default-features = false, features = ["multi-threaded", "dynamic_linking", "serialize"] }
+bevy = { version = "0.12.0", default-features = false, features = [
+  "multi-threaded",
+  "dynamic_linking",
+  "serialize",
+] }
 bevy-ws-server = { git = "https://github.com/kiwiyou/bevy-ws-server", branch = "main" }
 bevy_spatial = "0.7.0"
 async-tungstenite = "0.23.0"

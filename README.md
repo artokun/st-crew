@@ -12,7 +12,7 @@ sh ./generate.sh
 #### Rust
 ```sh
 cargo install cargo-watch
-cargo watch -cx run
+cargo watch -i sdk -i src/generated/ -cx run
 ```
 
 #### Node
