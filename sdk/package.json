@@ -27,7 +27,7 @@
     "patch": "npm version patch && npm run build && npm run publish",
     "minor": "npm version minor && npm run build && npm run publish",
     "major": "npm version major && npm run build && npm run publish",
-    "lint": "cd ../../ eslint --fix --ext .ts src && tsc --noEmit"
+    "lint": "eslint --fix --ext .ts src && tsc --noEmit"
   },
   "keywords": [
     "spacetraders",
@@ -37,6 +37,9 @@
   "author": "art@spacetraders.io",
   "license": "ISC",
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
     "eventemitter3": "5.0.1",
     "flatbuffers": "^23.5.26",
     "microbundle": "^0.15.1"
