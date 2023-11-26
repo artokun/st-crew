@@ -11,8 +11,7 @@ pub fn buffer(clients_connected: u32) -> WSMessage {
         &mut builder,
         &MessageArgs {
             message_type: MessageType::ServerStatEvent,
-            message: Some(event.as_union_value()),
-            ..Default::default()
+            message: Some(event.as_union_value())
         },
     );
     builder.finish(message, None);
