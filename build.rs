@@ -1,43 +1,81 @@
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/");
+    println!("cargo:rerun-if-changed=schemas/*.fbs");
 
-    let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("generate.sh");
-    let output = Command::new("sh")
-        .arg(script_path)
-        .arg(&out_dir)
+    let flatc_executable = if cfg!(windows) {
+        "./flatc.exe"
+    } else {
+        "flatc"
+    };
+
+    let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let schemas_dir = project_dir.join("schemas");
+    let rust_src_dir = project_dir.join("src");
+    let rust_generated_path = rust_src_dir.join("generated");
+    let ts_src_dir = project_dir.join("sdk/src");
+
+    fs::remove_dir_all(&rust_generated_path).ok();
+
+    let output = Command::new(flatc_executable)
+        .arg("--gen-all")
+        .arg("--rust")
+        .arg("--rust-module-root-file")
+        .arg("-o")
+        .arg(rust_src_dir.join("generated"))
+        .arg(schemas_dir.join("schema.fbs"))
         .output()
-        .expect("Failed to execute shell script");
+        .expect("failed to execute generate flatbuffer rust code");
 
     if !output.status.success() {
         panic!(
-            "Shell script failed with output:\n{}",
+            "cargo:warning=failed to generate flatbuffer rust code: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
 
-    let generated_path = Path::new(&out_dir).join("generated");
-    let mut new_content = String::from("#![allow(dead_code, unused_imports, clippy::all)]\n\n");
+    let mut generated_mod_file = File::options()
+        .read(true)
+        .open(rust_generated_path.join("mod.rs"))
+        .expect("failed to open generated mod file");
 
-    let entries: Vec<_> = fs::read_dir(generated_path).unwrap().collect();
+    let mut contents = String::new();
 
-    for entry in &entries {
-        let entry = entry.as_ref().unwrap();
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap() == "rs" {
-            let module_name = path.file_stem().unwrap().to_str().unwrap();
-            new_content.push_str(&format!("pub mod {};\n", module_name));
-        }
+    contents.push_str("#![allow(dead_code, unused_imports, clippy::all)]\n\n");
+
+    generated_mod_file
+        .read_to_string(&mut contents)
+        .expect("failed to read generated mod file");
+
+    let mut generated_mod_file = File::options()
+        .write(true)
+        .truncate(true)
+        .open(rust_generated_path.join("mod.rs"))
+        .expect("failed to open generated mod file");
+
+    generated_mod_file
+        .write_all(contents.as_bytes())
+        .expect("failed to write generated mod file");
+
+    let output = Command::new(flatc_executable)
+        .arg("--gen-object-api")
+        .arg("--ts")
+        .arg("-o")
+        .arg(&ts_src_dir.join("generated"))
+        .arg(schemas_dir.join("schema.fbs"))
+        .output()
+        .expect("failed to execute generate flatbuffer Typescript object api");
+
+    if !output.status.success() {
+        panic!(
+            "failed to generate flatbuffer Typescript object api: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
-    new_content.push_str("\npub use message_generated::*;");
-
-    let dest_path = Path::new(&out_dir).join("generated.rs");
-    fs::write(dest_path, new_content).unwrap();
-
-    println!("cargo:rerun-if-changed=schemas/*.fbs");
-    // println!("cargo:rerun-if-changed=build.rs");
 }

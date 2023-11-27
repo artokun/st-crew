@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 mod ecs;
-mod generated;
+pub mod generated;
 mod messages;
 
 use ecs::plugins::websocket::WebSocketPlugin;

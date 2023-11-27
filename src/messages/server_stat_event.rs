@@ -16,8 +16,6 @@ pub fn buffer(clients_connected: u16) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::generated::message::root_as_message;
-
     use super::*;
 
     #[test]
@@ -25,7 +23,7 @@ mod tests {
         let clients_connected = 10;
         let buf = buffer(clients_connected);
 
-        let message = root_as_message(&buf).unwrap();
+        let message = flatbuffers::root::<Message>(&buf).unwrap();
         let event = message.message_as_get_server().unwrap();
         assert_eq!(event.clients_connected(), clients_connected);
     }

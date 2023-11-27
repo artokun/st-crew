@@ -1,0 +1,4 @@
+include "client.fbs";
+include "message.fbs";
+include "shared.fbs";
+include "unit.fbs";

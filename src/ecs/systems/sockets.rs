@@ -4,7 +4,7 @@ use bevy::utils::Uuid;
 use bevy_ws_server::{ReceiveError, WsConnection, WsListener};
 
 use crate::ecs::components::client::ClientComponent;
-use crate::generated::message::{self, MessageType};
+use crate::generated::message::{Message, MessageType};
 use crate::messages::server_stat_event;
 
 pub fn startup_socket_listener(listener: Res<WsListener>) {
@@ -48,7 +48,7 @@ pub fn receive_message(
                             println!("Text Message: {}", &data)
                         }
                         WSMessage::Binary(data) => {
-                            let message = message::root_as_message(&data).unwrap();
+                            let message = flatbuffers::root::<Message>(&data).unwrap();
                             match message.message_type() {
                                 MessageType::RequestGetServer => {
                                     conn.send(WSMessage::binary(server_stat_event::buffer(
