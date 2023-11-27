@@ -1,0 +1,22 @@
+[package]
+name = "bevy_uws"
+version = "0.0.1"
+edition = "2021"
+authors = [
+  "Art Longbottom <art.longbottom@gmail.com>",
+  "Trevin Miller <stumblinbear@gmail.com>",
+]
+description = "Bevy async HTTP & WebSocket server plugin based on uWebSockets"
+license = "MIT"
+homepage = "https://github.com/artokun/bevy_uws"
+repository = "https://github.com/artokun/bevy_uws"
+keywords = ["bevy", "websockets", "uwebsockets"]
+exclude = ["build.rs"]
+
+[dependencies]
+bevy = { version = "0.12.0", default-features = false, features = [
+  "multi-threaded",
+] }
+async_uws = "0.0.22"
+uwebsockets_rs = "0.0.11"
+tokio = { version = "1.34.0", features = ["full"] }

@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    println!("cargo:rerun-if-changed=schemas/*.fbs");
+    println!("cargo:rerun-if-changed=./schemas/*.fbs");
 
     let flatc_executable = if cfg!(windows) {
         "./flatc.exe"
@@ -15,9 +15,9 @@ fn main() {
         "flatc"
     };
 
-    let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let project_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
     let schemas_dir = project_dir.join("schemas");
-    let rust_src_dir = project_dir.join("src");
+    let rust_src_dir = project_dir.join("game/src");
     let rust_generated_path = rust_src_dir.join("generated");
     let ts_src_dir = project_dir.join("sdk/src");
 
@@ -78,4 +78,16 @@ fn main() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+
+    // uWebsocket support
+    println!("cargo:rustc-link-lib=z");
+    println!("cargo:rustc-link-lib=uv");
+    println!("cargo:rustc-link-lib=ssl");
+    println!("cargo:rustc-link-lib=crypto");
+
+    // Conditional linking for C++ standard library based on the target OS
+    #[cfg(target_os = "macos")]
+    println!("cargo:rustc-link-lib=c++"); // Use libc++ for macOS
+    #[cfg(not(target_os = "macos"))]
+    println!("cargo:rustc-link-lib=stdc++"); // Use libstdc++ for other systems
 }
