@@ -16,6 +16,7 @@ bevy-ws-server = { git = "https://github.com/kiwiyou/bevy-ws-server", branch = "
 bevy_spatial = "0.7.0"
 async-tungstenite = "0.23.0"
 flatbuffers = "23.5.26"
+typify-macro = "0.0.14"
 
 [workspace]
 resolver = "2"

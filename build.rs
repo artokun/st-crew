@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    let out_dir = env::var("OUT_DIR").unwrap();
+    let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/");
 
     let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("generate.sh");
     let output = Command::new("sh")
@@ -21,7 +21,7 @@ fn main() {
     }
 
     let generated_path = Path::new(&out_dir).join("generated");
-    let mut new_content = String::from("mod generated {\n");
+    let mut new_content = String::from("#![allow(dead_code, unused_imports, clippy::all)]\n\n");
 
     let entries: Vec<_> = fs::read_dir(generated_path).unwrap().collect();
 
@@ -29,21 +29,15 @@ fn main() {
         let entry = entry.as_ref().unwrap();
         let path = entry.path();
         if path.is_file() && path.extension().unwrap() == "rs" {
-            // if path is generated.rs, skip it
-            if path.file_name().unwrap() == "generated.rs" {
-                continue;
-            }
             let module_name = path.file_stem().unwrap().to_str().unwrap();
-            new_content.push_str(&format!(
-                "#[allow(dead_code, unused_imports, clippy::all)]\npub mod {};\n",
-                module_name
-            ));
+            new_content.push_str(&format!("pub mod {};\n", module_name));
         }
     }
-    new_content.push_str("\npub use message_generated::*;\n}");
+    new_content.push_str("\npub use message_generated::*;");
 
     let dest_path = Path::new(&out_dir).join("generated.rs");
     fs::write(dest_path, new_content).unwrap();
 
     println!("cargo:rerun-if-changed=schemas/*.fbs");
+    // println!("cargo:rerun-if-changed=build.rs");
 }
