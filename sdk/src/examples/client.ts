@@ -1,22 +1,22 @@
-import SDK, { MessageTypes } from "../index";
+import SDK, { MessageTypes } from '../index';
 
 const sdk = new SDK();
 
-sdk.on("connect", () => {
-  console.log("Connected!");
+sdk.on('connect', () => {
+  console.log('Connected!');
   sdk.getServerStats();
 });
 
 sdk.on(MessageTypes.ServerStatEvent, (data) => {
-  console.log("ServerStatEventT:", data);
+  console.log('ServerStatEventT:', data);
 });
 
-sdk.on("error", (error) => {
-  console.log("Error:", error);
+sdk.on('error', (error) => {
+  console.log('Error:', error);
 });
 
-sdk.on("disconnect", (event) => {
-  console.log("Disconnected:", event);
+sdk.on('disconnect', (event) => {
+  console.log('Disconnected:', event);
 });
 
 await sdk.connect();
