@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+mod generated;
 mod messages;
 mod sockets;
 
