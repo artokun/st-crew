@@ -2,14 +2,14 @@ include "shared.fbs";
 
 namespace unit;
 
-enum UnitState : byte {
+enum UnitState : ubyte {
   Idle,
   Moving
 }
 
 // Game Tables
 table Unit {
-  id: uint;
+  uuid: string;
   name: string;
   controlled_by: string;
   state: UnitState = 0;

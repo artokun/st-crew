@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# Remember to revert this before releasing your game!
 bevy = { version = "0.12.0", default-features = false, features = [
   "multi-threaded",
+  # Remember to revert dynamic_linking before releasing your game!
   "dynamic_linking",
   "serialize",
 ] }
@@ -17,6 +17,7 @@ bevy_spatial = "0.7.0"
 async-tungstenite = "0.23.0"
 flatbuffers = "23.5.26"
 typify-macro = "0.0.14"
+rand = "0.8.4"
 
 [workspace]
 resolver = "2"

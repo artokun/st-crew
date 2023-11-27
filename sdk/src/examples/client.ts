@@ -4,11 +4,18 @@ const sdk = new SDK();
 
 sdk.on('connect', () => {
   console.log('Connected!');
-  sdk.getServerStats();
+
+  setInterval(() => {
+    sdk.getServerStats();
+  }, 3000);
 });
 
-sdk.on(MessageTypes.ServerStatEvent, (data) => {
-  console.log('ServerStatEventT:', data);
+sdk.on(MessageTypes.GetServer, (data) => {
+  console.log('GetServerT:', data);
+});
+
+sdk.on('message', (data) => {
+  console.log('Message:', data);
 });
 
 sdk.on('error', (error) => {

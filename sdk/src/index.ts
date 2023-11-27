@@ -1,14 +1,15 @@
 import EventEmitter from 'eventemitter3';
 import WebSocket from 'isomorphic-ws';
 import * as flatbuffers from 'flatbuffers';
-import { Message, MessageType, RequestServerStatEvent, ServerStatEventT } from './generated/message';
+import { Message, MessageType, RequestGetServer, GetServerT } from './generated/message';
 
 type DynamicPayloads = {
-  ServerStatEvent: ServerStatEventT;
+  GetServer: GetServerT;
 };
 
 type StaticPayloads = {
   connect: void;
+  message: string;
   disconnect: { code: number; reason: string };
   error: WebSocket.ErrorEvent;
 };
@@ -70,6 +71,11 @@ export class SpaceTradersRT extends EventEmitter {
     };
 
     this.ws.onmessage = ({ data }) => {
+      if (!(typeof data === 'object')) {
+        this.emit('message', data);
+        return;
+      }
+
       const buffer = new flatbuffers.ByteBuffer(data as Uint8Array);
       const message = Message.getRootAsMessage(buffer).unpack();
 
@@ -101,8 +107,8 @@ export class SpaceTradersRT extends EventEmitter {
    */
   public getServerStats() {
     const builder = new flatbuffers.Builder(1);
-    const event = RequestServerStatEvent.createRequestServerStatEvent(builder);
-    const message = Message.createMessage(builder, MessageType.RequestServerStatEvent, event);
+    const event = RequestGetServer.createRequestGetServer(builder);
+    const message = Message.createMessage(builder, MessageType.RequestGetServer, event);
     builder.finish(message);
     this.send(builder.asUint8Array());
   }
@@ -124,13 +130,10 @@ export class SpaceTradersRT extends EventEmitter {
 }
 
 // reexport the MessageType enum so that it can be used in the client with string literals as the keys
-export const MessageTypes = Array.from(Object.keys(MessageType)).reduce(
-  (acc, key) => {
-    // @ts-expect-error - this is a hack to get the payload type to be strongly typed
-    acc[key] = key;
-    return acc;
-  },
-  {} as { [key in keyof typeof MessageType]: key }
-);
+export const MessageTypes = Array.from(Object.keys(MessageType)).reduce((acc, key) => {
+  // @ts-expect-error - this is a hack to get the payload type to be strongly typed
+  acc[key] = key;
+  return acc;
+}, {} as { [key in keyof typeof MessageType]: key });
 
 export default SpaceTradersRT;

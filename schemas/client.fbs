@@ -1,13 +1,22 @@
 namespace client;
 
-enum ClientAction : byte {
-  Joined,
-  Left
+table Public {
+  uuid: string;
+  name: string;
+}
+
+table Private {
+  token: string;
+  last_login: uint;
+  energy: ubyte = 10;
+  energy_capacity: ubyte = 10;
+  energy_generation_sec: ubyte = 2;
+  unit_capacity: ubyte = 0;
 }
 
 table Client {
-  id: string;
-  name: string;
+  public: Public;
+  private: Private;
 }
 
 root_type Client;

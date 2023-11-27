@@ -1,14 +1,12 @@
-use crate::generated::message::{
-    Message, MessageArgs, MessageType, ServerStatEvent, ServerStatEventArgs,
-};
+use crate::generated::message::{GetServer, GetServerArgs, Message, MessageArgs, MessageType};
 
-pub fn buffer(clients_connected: u32) -> Vec<u8> {
-    let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
-    let event = ServerStatEvent::create(&mut builder, &ServerStatEventArgs { clients_connected });
+pub fn buffer(clients_connected: u16) -> Vec<u8> {
+    let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1);
+    let event = GetServer::create(&mut builder, &GetServerArgs { clients_connected });
     let message = Message::create(
         &mut builder,
         &MessageArgs {
-            message_type: MessageType::ServerStatEvent,
+            message_type: MessageType::GetServer,
             message: Some(event.as_union_value()),
         },
     );
@@ -28,7 +26,7 @@ mod tests {
         let buf = buffer(clients_connected);
 
         let message = root_as_message(&buf).unwrap();
-        let event = message.message_as_server_stat_event().unwrap();
+        let event = message.message_as_get_server().unwrap();
         assert_eq!(event.clients_connected(), clients_connected);
     }
 }

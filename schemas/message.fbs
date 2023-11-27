@@ -1,40 +1,28 @@
-include "shared.fbs";
 include "client.fbs";
-include "unit.fbs";
 
 namespace message;
 
-table NoOpEvent {}
+table NoOp {}
 
-table InitClientEvent {
+table RequestGetServer {}
+table GetServer {
+  clients_connected: ushort;
+}
+
+table RequestGetClient {}
+table GetClient {
   client: client.Client;
-}
-
-table ClientUpdateEvent {
-  action: client.ClientAction;
-  client: client.Client;
-}
-
-table InitStateEvent {
-  units: [unit.Unit];
-}
-
-table RequestServerStatEvent {}
-
-table ServerStatEvent {
-  clients_connected: uint;
 }
 
 union MessageType {
   //Server -> Client
-  NoOpEvent,
-  InitClientEvent,
-  InitStateEvent,
-  ClientUpdateEvent,
-  ServerStatEvent,
+  NoOp,
+  GetServer,
+  GetClient,
 
   //Client -> Server
-  RequestServerStatEvent
+  RequestGetServer,
+  RequestGetClient
 }
 
 table Message {

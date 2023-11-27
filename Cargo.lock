@@ -2089,6 +2089,7 @@ dependencies = [
  "bevy-ws-server",
  "bevy_spatial",
  "flatbuffers",
+ "rand",
  "typify-macro",
 ]
 
