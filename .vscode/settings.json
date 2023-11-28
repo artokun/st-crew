@@ -1,6 +1,0 @@
-{
-  "rust-analyzer.linkedProjects": [
-    "./game/Cargo.toml",
-    "./bevy-ws-server/Cargo.toml"
-  ]
-}

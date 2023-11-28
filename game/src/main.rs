@@ -1,13 +1,20 @@
-use bevy::prelude::*;
+use bevy::{log::LogPlugin, prelude::*};
+use bevy_tokio_tasks::TokioTasksPlugin;
 
 mod ecs;
 pub mod generated;
 mod messages;
 
-use ecs::plugins::websocket::WebSocketPlugin;
+use ecs::{features::FeaturesPlugin, plugins::websocket::WebSocketPlugin};
 
 fn main() {
     App::new()
-        .add_plugins((MinimalPlugins, WebSocketPlugin))
+        .add_plugins((
+            MinimalPlugins,
+            LogPlugin::default(),
+            TokioTasksPlugin::default(),
+            WebSocketPlugin,
+            FeaturesPlugin,
+        ))
         .run();
 }
