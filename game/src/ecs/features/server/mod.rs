@@ -8,7 +8,7 @@ mod systems;
 
 pub use connected_players::*;
 
-use crate::ecs::plugins::websocket::WsReceiveMessages;
+use crate::ecs::plugins::websocket::ReceiveNetworkMessages;
 
 pub struct ServerPlugin;
 
@@ -22,7 +22,7 @@ impl Plugin for ServerPlugin {
                     systems::update_connected_players,
                     systems::handle_message.after(systems::update_connected_players),
                 )
-                    .after(WsReceiveMessages),
+                    .after(ReceiveNetworkMessages),
             );
     }
 }
