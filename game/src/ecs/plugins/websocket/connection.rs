@@ -7,7 +7,7 @@ use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 use crate::ecs::plugins::websocket::WsMessage;
 
-use super::{ConnectionId, WsEvent};
+use super::{ConnectionId, WsEvent, WsMessageType};
 
 #[derive(Debug)]
 pub struct WsConnection {
@@ -61,8 +61,15 @@ impl WsConnection {
         .await;
     }
 
-    pub fn send(&self, message: WsMessage) -> bool {
+    pub fn send_raw(&self, message: WsMessage) -> bool {
         self.sender.try_send(message).is_ok()
+    }
+
+    pub fn send<T>(&self, message: T) -> bool
+    where
+        T: WsMessageType,
+    {
+        self.sender.try_send(message.to_message()).is_ok()
     }
 }
 

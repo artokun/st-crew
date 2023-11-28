@@ -7,11 +7,13 @@ mod connection_id;
 mod connections;
 mod event;
 mod listener;
+mod message;
 
 pub use connection::*;
 pub use connection_id::*;
 pub use connections::*;
 pub use event::*;
+pub use message::*;
 
 use self::listener::{write_events_from_channel, WsEventQueue, WsListener};
 

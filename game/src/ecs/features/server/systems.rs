@@ -4,7 +4,7 @@ use bevy::{log, prelude::*};
 use crate::ecs::components::client::ClientComponent;
 use crate::ecs::plugins::websocket::{WsConnections, WsEvent, WsMessage, WsServer};
 use crate::generated::message::{Message, MessageType};
-use crate::messages::server_stat_event;
+use crate::messages::server_stat_event::GetServerMessage;
 
 use super::ConnectedPlayers;
 
@@ -38,9 +38,9 @@ pub fn update_connected_players(
 
                 connected_players.on_player_connected(connection.id, entity);
 
-                connection.send(WsMessage::Binary(server_stat_event::buffer(
-                    connections.iter().count() as u16,
-                )));
+                connection.send(GetServerMessage {
+                    clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                });
             }
 
             WsEvent::Disconnected { connection_id } => {
@@ -71,7 +71,7 @@ pub fn handle_message(mut event_reader: EventReader<WsEvent>, connections: Res<W
         {
             println!("Client message: {}", connection_id);
 
-            let conn = connections.get(connection_id).unwrap();
+            let connection = connections.get(connection_id).unwrap();
 
             match message {
                 WsMessage::Text(data) => {
@@ -83,13 +83,14 @@ pub fn handle_message(mut event_reader: EventReader<WsEvent>, connections: Res<W
 
                     match message.message_type() {
                         MessageType::RequestGetServer => {
-                            conn.send(WsMessage::Binary(server_stat_event::buffer(
-                                connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
-                            )));
+                            connection.send(GetServerMessage {
+                                clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                            });
                         }
 
                         MessageType::NoOp => {
-                            conn.send(WsMessage::Text("Welcome to ST-RT-API".to_string()));
+                            connection
+                                .send_raw(WsMessage::Text("Welcome to ST-RT-API".to_string()));
                         }
 
                         _ => {}
