@@ -61,17 +61,22 @@ impl WsConnection {
         .await;
     }
 
-    pub fn send_raw(&self, message: WsMessage) -> bool {
-        self.sender.try_send(message).is_ok()
+    pub fn send_raw(&self, message: WsMessage) -> Result<(), SendError> {
+        self.sender.try_send(message).map_err(|_| SendError)
     }
 
-    pub fn send<T>(&self, message: T) -> bool
+    pub fn send<T>(&self, message: T) -> Result<(), SendError>
     where
         T: WsMessageType,
     {
-        self.sender.try_send(message.to_message()).is_ok()
+        self.sender
+            .try_send(message.to_message())
+            .map_err(|_| SendError)
     }
 }
+
+#[derive(Debug)]
+pub struct SendError;
 
 struct WsConnectionListener {
     connection_id: ConnectionId,

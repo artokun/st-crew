@@ -1,5 +1,6 @@
 use bevy::utils::Uuid;
 use bevy::{log, prelude::*};
+use bevy_tokio_tasks::TokioTasksRuntime;
 
 use crate::ecs::components::client::ClientComponent;
 use crate::ecs::plugins::websocket::{WsConnections, WsEvent, WsMessage, WsServer};
@@ -8,8 +9,11 @@ use crate::messages::server_stat_event::GetServerMessage;
 
 use super::ConnectedPlayers;
 
-pub fn startup_socket_listener(mut server: WsServer) {
-    server.start_listening("localhost:8081");
+pub fn startup_socket_listener(
+    tokio_runtime: Res<TokioTasksRuntime>,
+    mut server: ResMut<WsServer>,
+) {
+    server.start_listening(&tokio_runtime, "localhost:8081");
 }
 
 pub fn update_connected_players(

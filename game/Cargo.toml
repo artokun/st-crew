@@ -26,6 +26,9 @@ bevy-tokio-tasks = { git = "https://github.com/foxzool/bevy-tokio-tasks", rev = 
 tokio-tungstenite = "0.20"
 flatbuffers = "23.5.26"
 
+[dev-dependencies]
+tokio = { version = "1.0.0", features = ["macros"] }
+
 # Enable a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1

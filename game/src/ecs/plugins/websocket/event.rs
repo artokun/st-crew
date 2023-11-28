@@ -20,7 +20,7 @@ pub enum WsEvent {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum WsMessage {
     Text(String),
     Binary(Vec<u8>),

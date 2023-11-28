@@ -1,21 +1,22 @@
-use bevy::{ecs::system::SystemParam, log, prelude::*};
-use bevy_tokio_tasks::TokioTasksRuntime;
-use tokio::net::{TcpListener, ToSocketAddrs};
+use bevy::prelude::*;
 
 mod connection;
 mod connection_id;
 mod connections;
 mod event;
-mod listener;
 mod message;
+#[cfg(test)]
+mod mock;
+mod server;
 
 pub use connection::*;
 pub use connection_id::*;
 pub use connections::*;
 pub use event::*;
 pub use message::*;
+pub use server::WsServer;
 
-use self::listener::{write_events_from_channel, WsEventQueue, WsListener};
+use self::server::{write_events_from_channel, WsEventQueue};
 
 // TODO: lets add the connection state resource here as well as define the message event types,
 // lets also create a fixed time step scheduler to handle the energy generation
@@ -26,64 +27,101 @@ impl Plugin for WebSocketPlugin {
     fn build(&self, app: &mut App) {
         let (events_tx, events_rx) = async_channel::unbounded();
 
-        app.insert_resource(WsListener {
-            events_tx,
-
-            join_handle: None,
-        })
-        .insert_resource(WsEventQueue { events_rx })
-        .insert_resource(WsConnections::default())
-        .add_event::<WsEvent>()
-        .add_systems(
-            PreUpdate,
-            (write_events_from_channel, update_connections_map).chain(),
-        );
+        app.insert_resource(WsServer::new(events_tx))
+            .insert_resource(WsEventQueue::new(events_rx))
+            .insert_resource(WsConnections::default())
+            .add_event::<WsEvent>()
+            .add_systems(
+                PreUpdate,
+                (write_events_from_channel, update_connections_map).chain(),
+            );
     }
 }
 
-#[derive(SystemParam)]
-pub struct WsServer<'w> {
-    tokio_runtime: Res<'w, TokioTasksRuntime>,
-    ws_server: ResMut<'w, WsListener>,
-}
+#[cfg(test)]
+mod tests {
+    use futures_util::{SinkExt, StreamExt};
+    use tokio_tungstenite::tungstenite::Message;
 
-impl WsServer<'_> {
-    pub fn start_listening(&mut self, bind_to: impl ToSocketAddrs + Send + 'static) {
-        if self.ws_server.join_handle.is_some() {
-            log::error!("websocket server is already listening");
-            return;
+    use crate::ecs::plugins::websocket::{WsEvent, WsMessage, WsServer};
+
+    // #[tokio::test]
+    // async fn can_connect() {
+    //     let (server_tx, server_rx) = async_channel::unbounded();
+
+    //     let server = WsServer::new(server_tx).mock().await;
+
+    //     let (mut socket, _) = tokio_tungstenite::connect_async(server.uri())
+    //         .await
+    //         .expect("failed to connect");
+
+    //     socket
+    //         .send(Message::Text("Hello WebSocket".into()))
+    //         .await
+    //         .unwrap();
+
+    //     let message = server_rx.try_recv().expect("no message received");
+
+    //     println!("Received: {:?}", message);
+
+    //     loop {
+    //         let msg = socket
+    //             .next()
+    //             .await
+    //             .expect("error reading message")
+    //             .expect("error reading message");
+    //         println!("Received: {}", msg);
+    //     }
+    // }
+
+    #[tokio::test]
+    async fn websocket_connection_lifecycle() {
+        let (server_tx, server_rx) = async_channel::unbounded();
+
+        let server = WsServer::new(server_tx).mock().await;
+
+        let (mut client_socket, _) = tokio_tungstenite::connect_async(server.uri())
+            .await
+            .expect("failed to connect");
+
+        let connection = match server_rx.recv().await.expect("no message received") {
+            WsEvent::Connected { connection } => connection,
+            other => panic!("did not receive a connected event: {:?}", other),
+        };
+
+        let connection_id = connection.id;
+
+        client_socket
+            .send(Message::Text("foo".to_string()))
+            .await
+            .expect("failed to send message");
+
+        match server_rx.recv().await.expect("no message received") {
+            WsEvent::Message {
+                message: WsMessage::Text(message),
+                ..
+            } => assert_eq!(message, "foo"),
+
+            other => panic!("did not receive a message event: {:?}", other),
         }
 
-        log::info!("starting websocket server");
+        connection
+            .send_raw(WsMessage::Text("bar".to_string()))
+            .expect("failed to send message");
 
-        let events_tx = self.ws_server.events_tx.clone();
+        match client_socket.next().await.expect("error reading message") {
+            Ok(Message::Text(message)) => assert_eq!(message, "bar"),
+            other => panic!("did not receive a message event: {:?}", other),
+        }
 
-        let task = self
-            .tokio_runtime
-            .spawn_background_task(move |_| async move {
-                let listener = match TcpListener::bind(bind_to).await {
-                    Ok(listener) => listener,
+        drop(connection);
 
-                    Err(err) => {
-                        log::error!("error binding websocket listener: {}", err);
+        match server_rx.recv().await.expect("no message received") {
+            WsEvent::Disconnected {
+                connection_id: event_connection_id,
+            } => assert_eq!(connection_id, event_connection_id),
 
-                        return;
-                    }
-                };
-
-                loop {
-                    match listener.accept().await {
-                        Ok((stream, _)) => {
-                            tokio::spawn(WsConnection::accept(events_tx.clone(), stream));
-                        }
-
-                        Err(e) => {
-                            log::error!("error accepting a new connection: {}", e);
-                        }
-                    }
-                }
-            });
-
-        self.ws_server.join_handle = Some(task);
+            other => panic!("did not receive a disconnect event: {:?}", other),
+        }
     }
 }
