@@ -42,9 +42,11 @@ pub fn update_connected_players(
 
                 connected_players.on_player_connected(connection.id, entity);
 
-                connection.send(GetServerMessage {
-                    clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
-                });
+                connection
+                    .send(GetServerMessage {
+                        clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                    })
+                    .ok();
             }
 
             WsEvent::Disconnected { connection_id } => {
@@ -87,14 +89,17 @@ pub fn handle_message(mut event_reader: EventReader<WsEvent>, connections: Res<W
 
                     match message.message_type() {
                         MessageType::RequestGetServer => {
-                            connection.send(GetServerMessage {
-                                clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
-                            });
+                            connection
+                                .send(GetServerMessage {
+                                    clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                                })
+                                .ok();
                         }
 
                         MessageType::NoOp => {
                             connection
-                                .send_raw(WsMessage::Text("Welcome to ST-RT-API".to_string()));
+                                .send_raw(WsMessage::Text("Welcome to ST-RT-API".to_string()))
+                                .ok();
                         }
 
                         _ => {}
