@@ -31,12 +31,18 @@ impl Plugin for WebSocketPlugin {
             .insert_resource(WsEventQueue::new(events_rx))
             .insert_resource(WsConnections::default())
             .add_event::<WsEvent>()
+            .configure_sets(PreUpdate, WsReceiveMessages)
             .add_systems(
                 PreUpdate,
-                (write_events_from_channel, update_connections_map).chain(),
+                (write_events_from_channel, update_connections_map)
+                    .chain()
+                    .in_set(WsReceiveMessages),
             );
     }
 }
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub struct WsReceiveMessages;
 
 #[cfg(test)]
 mod tests {

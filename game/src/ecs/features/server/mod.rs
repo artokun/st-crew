@@ -1,5 +1,5 @@
 use bevy::{
-    app::{App, Plugin, Startup, Update},
+    app::{App, Plugin, PreUpdate, Startup},
     ecs::schedule::IntoSystemConfigs,
 };
 
@@ -8,6 +8,8 @@ mod systems;
 
 pub use connected_players::*;
 
+use crate::ecs::plugins::websocket::WsReceiveMessages;
+
 pub struct ServerPlugin;
 
 impl Plugin for ServerPlugin {
@@ -15,11 +17,12 @@ impl Plugin for ServerPlugin {
         app.insert_resource(ConnectedPlayers::default())
             .add_systems(Startup, systems::startup_socket_listener)
             .add_systems(
-                Update,
+                PreUpdate,
                 (
                     systems::update_connected_players,
                     systems::handle_message.after(systems::update_connected_players),
-                ),
+                )
+                    .after(WsReceiveMessages),
             );
     }
 }
