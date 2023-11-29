@@ -7,7 +7,7 @@ sdk.on('connect', () => {
 
   setInterval(() => {
     sdk.getServerStats();
-  }, 1000);
+  }, 500);
 });
 
 sdk.on(MessageTypes.GetServer, (data) => {

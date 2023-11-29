@@ -1,10 +1,10 @@
 use async_tungstenite::tungstenite::protocol::Message as WSMessage;
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 use bevy_ws_server::{ReceiveError, WsConnection, WsListener, WsPlugin};
 
+use crate::components::player::{Energy, Name, PlayerBundle};
 use crate::generated::message::{Message, MessageType};
 use crate::messages::server_stat_event;
-use crate::player::{Energy, Name, PlayerBundle};
 
 const GENERATE_ENERGY_INTERVAL: f32 = 1.0;
 
@@ -47,7 +47,7 @@ fn assign_client_to_socket(
         conn.send(WSMessage::binary(server_stat_event::buffer(
             connections.iter().count() as u16,
         )));
-        println!("Client connected: {:?}", name);
+        log::info!("Client connected: {:?}", name);
     }
 }
 
@@ -61,14 +61,14 @@ fn receive_message(
             match conn.receive() {
                 Ok(message) => {
                     if energy.current <= 0 {
-                        println!("{} has 0 energy left", name.0);
+                        log::info!("{} has 0 energy left", name.0);
                         conn.send(WSMessage::text("0 energy left, closing connection"));
                         commands.entity(entity).despawn();
                         continue;
                     }
                     match message {
                         WSMessage::Text(data) => {
-                            println!("Text Message: {}", &data)
+                            log::info!("Text Message: {}", &data)
                         }
                         WSMessage::Binary(data) => {
                             let message = flatbuffers::root::<Message>(&data).unwrap();
@@ -118,7 +118,7 @@ fn generate_energy(
 
             energy.update(delta);
             conn.send(WSMessage::Text(format!("+1 energy to {}", current + 1)));
-            println!("{} has {} energy left", name.0, energy.current)
+            log::info!("{} has {} energy left", name.0, energy.current)
         }
     }
 }
