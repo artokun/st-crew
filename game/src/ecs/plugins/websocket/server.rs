@@ -54,14 +54,14 @@ impl WsServer {
         self.join_handle = Some(task);
     }
 
-    pub fn stop_listening(&mut self) {
-        log::info!("stopping websocket server");
+    // pub fn stop_listening(&mut self) {
+    //     log::info!("stopping websocket server");
 
-        self.join_handle
-            .take()
-            .expect("websocket server is not listening")
-            .abort();
-    }
+    //     self.join_handle
+    //         .take()
+    //         .expect("websocket server is not listening")
+    //         .abort();
+    // }
 
     #[cfg(test)]
     pub async fn mock(self) -> crate::ecs::plugins::websocket::mock::MockServer {

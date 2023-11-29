@@ -1,6 +1,6 @@
-use bevy::utils::Uuid;
+use bevy::{ecs::component::Component, utils::Uuid};
 
-#[derive(Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Component, Debug, Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ConnectionId(Uuid);
 
 impl ConnectionId {
