@@ -1,8 +1,7 @@
-use bevy::utils::Uuid;
 use bevy::{log, prelude::*};
 use bevy_tokio_tasks::TokioTasksRuntime;
 
-use crate::ecs::components::client::ClientComponent;
+use crate::ecs::components::client::{Player, PlayerBundle};
 use crate::ecs::plugins::websocket::{WsConnections, WsEvent, WsMessage, WsServer};
 use crate::generated::message::{Message, MessageType};
 use crate::messages::server_stat_event::GetServerMessage;
@@ -13,7 +12,7 @@ pub fn startup_socket_listener(
     tokio_runtime: Res<TokioTasksRuntime>,
     mut server: ResMut<WsServer>,
 ) {
-    server.start_listening(&tokio_runtime, "localhost:8081");
+    server.start_listening(&tokio_runtime, "localhost:8080");
 }
 
 pub fn update_connected_players(
@@ -25,22 +24,11 @@ pub fn update_connected_players(
     for event in event_reader.read() {
         match event {
             WsEvent::Connected { connection } => {
-                println!("Client connected: {}", connection.id);
+                log::info!("Client connected: {}", connection.id);
 
-                let uuid = Uuid::new_v4();
+                let entity = commands.spawn(PlayerBundle::new(connection.id));
 
-                let entity = commands
-                    .spawn(ClientComponent {
-                        uuid,
-                        name: format!("guest-{}", uuid.as_hyphenated()),
-                        energy: 10,
-                        energy_capacity: 10,
-                        energy_generation_sec: 1,
-                        unit_capacity: 10,
-                    })
-                    .id();
-
-                connected_players.on_player_connected(connection.id, entity);
+                connected_players.on_player_connected(connection.id, entity.id());
 
                 connection
                     .send(GetServerMessage {
@@ -50,7 +38,7 @@ pub fn update_connected_players(
             }
 
             WsEvent::Disconnected { connection_id } => {
-                println!("Client disconnected: {}", connection_id);
+                log::info!("Client disconnected: {}", connection_id);
 
                 match connected_players.on_player_disconnected(connection_id) {
                     Some(entity) => {
@@ -75,18 +63,16 @@ pub fn handle_message(mut event_reader: EventReader<WsEvent>, connections: Res<W
             message,
         } = event
         {
-            println!("Client message: {}", connection_id);
-
             let connection = connections.get(connection_id).unwrap();
 
             match message {
                 WsMessage::Text(data) => {
-                    println!("Text Message: {}", &data)
+                    log::info!("Text Message: {}", &data);
                 }
 
                 WsMessage::Binary(data) => {
-                    let message = flatbuffers::root::<Message>(data).unwrap();
-
+                    let message: Message<'_> = flatbuffers::root::<Message>(data).unwrap();
+                    log::info!("Binary Message: {:?}", message.message_type());
                     match message.message_type() {
                         MessageType::RequestGetServer => {
                             connection
