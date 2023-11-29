@@ -7,7 +7,7 @@ pub struct Player(Uuid);
 pub struct UnitCapacity(pub i32);
 
 #[derive(Component, Debug)]
-pub struct Name(pub String);
+pub struct PlayerName(pub String);
 
 #[derive(Component)]
 pub struct Energy {
@@ -26,26 +26,26 @@ impl Energy {
 // Bundle
 #[derive(Bundle)]
 pub struct PlayerBundle {
-    pub player: Player,
+    pub marker: Player,
     pub energy: Energy,
     pub unit_capacity: UnitCapacity,
-    pub name: Name,
+    pub name: PlayerName,
 }
 
-impl PlayerBundle {
-    pub fn new() -> Self {
+impl Default for PlayerBundle {
+    fn default() -> Self {
         let uuid = Uuid::new_v4();
         let name = format!("player-{}", &uuid.to_string()[..8]);
 
         Self {
-            player: Player(uuid),
+            marker: Player(uuid),
             energy: Energy {
                 current: 10,
                 capacity: 10,
                 generation_sec: 1,
             },
             unit_capacity: UnitCapacity(1),
-            name: Name(name),
+            name: PlayerName(name),
         }
     }
 }
