@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
-mod ecs;
 pub mod generated;
 mod messages;
+mod player;
+mod sockets;
 
-use ecs::plugins::websocket::WebSocketPlugin;
+use sockets::WebSocketPlugin;
 
 fn main() {
     App::new()

@@ -30,7 +30,7 @@ export class SpaceTradersRT extends EventEmitter {
    */
   constructor() {
     super();
-    this.url = 'ws://localhost:8080';
+    this.url = 'ws://localhost:8081';
     this.ws = null;
   }
 
