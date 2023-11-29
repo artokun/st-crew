@@ -13,20 +13,11 @@ pub fn startup_socket_listener(
     server.start_listening(&tokio_runtime, "localhost:8081");
 }
 
-pub fn send_clients_connected_on_join(
-    mut event_reader: EventReader<WsEvent>,
-    connections: Res<WsConnections>,
-) {
+pub fn log_connection_events(mut event_reader: EventReader<WsEvent>) {
     for event in event_reader.read() {
         match event {
             WsEvent::Connected { connection } => {
                 log::info!("client connected: {}", connection.id);
-
-                connection
-                    .send(GetServerMessage {
-                        clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
-                    })
-                    .ok();
             }
 
             WsEvent::Disconnected { connection_id } => {
@@ -34,6 +25,21 @@ pub fn send_clients_connected_on_join(
             }
 
             _ => {}
+        }
+    }
+}
+
+pub fn send_clients_connected_on_join(
+    mut event_reader: EventReader<WsEvent>,
+    connections: Res<WsConnections>,
+) {
+    for event in event_reader.read() {
+        if let WsEvent::Connected { connection } = event {
+            connection
+                .send(GetServerMessage {
+                    clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                })
+                .ok();
         }
     }
 }
