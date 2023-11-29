@@ -1,16 +1,6 @@
-use bevy::{
-    ecs::{
-        query::Changed,
-        system::{Query, Res},
-    },
-    log,
-    time::Time,
-};
+use bevy::{log, prelude::*};
 
-use crate::ecs::{
-    features::energy::components::{Energy, EnergyRegeneration},
-    plugins::websocket::{ConnectionId, WsConnections, WsMessage},
-};
+use crate::ecs::features::energy::components::{Energy, EnergyRegeneration};
 
 pub fn do_energy_regen(time: Res<Time>, mut query: Query<(&mut Energy, &mut EnergyRegeneration)>) {
     for (mut energy, mut regen) in query.iter_mut() {
@@ -38,21 +28,5 @@ pub fn do_energy_regen(time: Res<Time>, mut query: Query<(&mut Energy, &mut Ener
                 );
             }
         }
-    }
-}
-
-pub fn sync_player_energy_regen(
-    mut query: Query<(&ConnectionId, &Energy), Changed<Energy>>,
-    connections: Res<WsConnections>,
-) {
-    for (connection_id, new_energy) in query.iter_mut() {
-        let connection = connections.get(connection_id).expect("no connection found");
-
-        connection
-            .send_raw(WsMessage::Text(format!(
-                "Your energy has changed! You now have {}/{}.",
-                new_energy.current, new_energy.capacity
-            )))
-            .ok();
     }
 }
