@@ -17,6 +17,12 @@ impl Plugin for ServerPlugin {
                 PreUpdate,
                 systems::log_connection_events.after(ReceiveNetworkMessages),
             )
-            .add_systems(Update, systems::send_clients_connected_on_join);
+            .add_systems(
+                Update,
+                (
+                    systems::send_clients_connected_on_join,
+                    systems::handle_message,
+                ),
+            );
     }
 }

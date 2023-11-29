@@ -6,6 +6,17 @@ pub struct Energy {
     pub capacity: u16,
 }
 
+impl Energy {
+    pub fn spend(&mut self, amount: u16) -> Result<(), String> {
+        if self.current >= amount {
+            self.current -= amount;
+            Ok(())
+        } else {
+            Err("Not enough energy".to_owned())
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct EnergyRegeneration {
     pub amount: u16,

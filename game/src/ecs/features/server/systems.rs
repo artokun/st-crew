@@ -1,9 +1,12 @@
 use bevy::{log, prelude::*};
 use bevy_tokio_tasks::TokioTasksRuntime;
 
-use crate::ecs::{
-    features::server::messages::GetServerMessage,
-    plugins::websocket::{WsConnections, WsEvent, WsServer},
+use crate::{
+    ecs::{
+        features::{energy::Energy, players::ConnectedPlayers, server::messages::GetServerMessage},
+        plugins::websocket::{WsConnections, WsEvent, WsMessage, WsServer},
+    },
+    generated::message::{Message, MessageType},
 };
 
 pub fn startup_socket_listener(
@@ -44,42 +47,57 @@ pub fn send_clients_connected_on_join(
     }
 }
 
-// pub fn handle_message(mut event_reader: EventReader<WsEvent>, connections: Res<WsConnections>) {
-//     for event in event_reader.read() {
-//         if let WsEvent::Message {
-//             connection_id,
-//             message,
-//         } = event
-//         {
-//             let connection = connections.get(connection_id).unwrap();
+pub fn handle_message(
+    mut event_reader: EventReader<WsEvent>,
+    connections: Res<WsConnections>,
+    players: Res<ConnectedPlayers>,
+    mut query: Query<&mut Energy>,
+) {
+    for event in event_reader.read() {
+        if let WsEvent::Message {
+            connection_id,
+            message,
+        } = event
+        {
+            let connection = connections.get(connection_id).unwrap();
+            let player_entity = players.get(connection_id).unwrap().to_owned();
+            let mut energy = query.get_mut(player_entity).unwrap();
 
-//             match message {
-//                 WsMessage::Text(data) => {
-//                     log::info!("text message: {}", &data);
-//                 }
+            match message {
+                WsMessage::Text(data) => {
+                    log::info!("text message: {}", &data);
+                }
 
-//                 WsMessage::Binary(data) => {
-//                     let message: Message<'_> = flatbuffers::root::<Message>(data).unwrap();
-//                     log::info!("binary message: {:?}", message.message_type());
-//                     match message.message_type() {
-//                         MessageType::RequestGetServer => {
-//                             connection
-//                                 .send(GetServerMessage {
-//                                     clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
-//                                 })
-//                                 .ok();
-//                         }
+                WsMessage::Binary(data) => {
+                    let message: Message<'_> = flatbuffers::root::<Message>(data).unwrap();
+                    log::info!("RECEIVED: {:?}", message.message_type());
+                    match message.message_type() {
+                        MessageType::RequestGetServer => {
+                            match energy.spend(2) {
+                                Ok(_) => {
+                                    connection
+                                        .send(GetServerMessage {
+                                            clients_connected: connections.iter().count() as u16, //TODO: lets create a game state resource and use that for connection counts
+                                        })
+                                        .ok();
+                                }
 
-//                         MessageType::NoOp => {
-//                             connection
-//                                 .send_raw(WsMessage::Text("Welcome to ST-RT-API".to_string()))
-//                                 .ok();
-//                         }
+                                Err(err) => {
+                                    connection.send_raw(WsMessage::Text(err)).ok();
+                                }
+                            }
+                        }
 
-//                         _ => {}
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
+                        MessageType::NoOp => {
+                            connection
+                                .send_raw(WsMessage::Text("Welcome to ST-RT-API".to_string()))
+                                .ok();
+                        }
+
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+}

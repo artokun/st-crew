@@ -1,3 +1,5 @@
+use bevy::log;
+
 use crate::{
     ecs::plugins::websocket::{WsMessage, WsMessageType},
     generated::message::{GetServer, GetServerArgs, Message, MessageArgs, MessageType},
@@ -17,7 +19,6 @@ impl WsMessageType for GetServerMessage {
                 clients_connected: self.clients_connected,
             },
         );
-
         let message = Message::create(
             &mut builder,
             &MessageArgs {
@@ -28,6 +29,7 @@ impl WsMessageType for GetServerMessage {
 
         builder.finish(message, None);
 
+        log::info!("SENT: GetServer");
         WsMessage::Binary(builder.finished_data().to_vec())
     }
 }
