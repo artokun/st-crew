@@ -3,7 +3,6 @@ use bevy_tokio_tasks::TokioTasksPlugin;
 
 mod ecs;
 pub mod generated;
-mod messages;
 
 use ecs::{features::FeaturesPlugin, plugins::websocket::WebSocketPlugin};
 

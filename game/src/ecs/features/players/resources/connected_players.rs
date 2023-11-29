@@ -12,14 +12,11 @@ pub struct ConnectedPlayers {
 }
 
 impl ConnectedPlayers {
-    pub(super) fn on_player_connected(&mut self, connection_id: ConnectionId, player: Entity) {
+    pub fn on_player_connected(&mut self, connection_id: ConnectionId, player: Entity) {
         self.map.insert(connection_id, player);
     }
 
-    pub(super) fn on_player_disconnected(
-        &mut self,
-        connection_id: &ConnectionId,
-    ) -> Option<Entity> {
+    pub fn on_player_disconnected(&mut self, connection_id: &ConnectionId) -> Option<Entity> {
         self.map.remove(connection_id)
     }
 }
