@@ -1,13 +1,12 @@
 use bevy::prelude::*;
 
-use crate::ecs::plugins::websocket::ReceiveNetworkMessages;
-
 mod components;
 mod resources;
 mod systems;
 
 pub use components::Player;
 pub use resources::ConnectedPlayers;
+use st_commander::ReceiveNetworkMessages;
 pub use systems::SpawnPlayer;
 
 pub struct PlayersPlugin;

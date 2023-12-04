@@ -1,11 +1,9 @@
-namespace client;
-
-table Public {
+interface PublicPlayerInfo {
   uuid: string;
   name: string;
 }
 
-table Private {
+interface PrivatePlayerInfo {
   token: string;
   last_login: uint;
   energy: ubyte = 10;
@@ -14,9 +12,4 @@ table Private {
   unit_capacity: ubyte = 0;
 }
 
-table Client {
-  public: Public;
-  private: Private;
-}
-
-root_type Client;
+export type PlayerInfo = PublicPlayerInfo | (PublicPlayerInfo & PrivatePlayerInfo);

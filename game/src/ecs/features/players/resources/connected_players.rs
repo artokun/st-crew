@@ -3,8 +3,7 @@ use bevy::{
     prelude::Deref,
     utils::HashMap,
 };
-
-use crate::ecs::plugins::websocket::ConnectionId;
+use st_commander::connection::ConnectionId;
 
 #[derive(Resource, Default, Deref)]
 pub struct ConnectedPlayers {

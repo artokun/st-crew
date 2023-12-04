@@ -7,11 +7,9 @@ use bevy::{
     },
     log,
 };
+use st_commander::{connection::ConnectionId, event::SocketConnectionEvent};
 
-use crate::ecs::{
-    features::players::{ConnectedPlayers, Player},
-    plugins::websocket::{ConnectionId, WsEvent},
-};
+use crate::ecs::features::players::{ConnectedPlayers, Player};
 
 #[derive(Bundle)]
 struct PlayerBundle {
@@ -22,12 +20,12 @@ struct PlayerBundle {
 
 pub fn update_connected_players(
     mut commands: Commands,
-    mut event_reader: EventReader<WsEvent>,
+    mut event_reader: EventReader<SocketConnectionEvent>,
     mut connected_players: ResMut<ConnectedPlayers>,
 ) {
     for event in event_reader.read() {
         match event {
-            WsEvent::Connected { connection } => {
+            SocketConnectionEvent::Connected { connection } => {
                 let player = Player::new_random();
 
                 let name = Name::new(format!("player-{}", &player.to_string()[..8]));
@@ -44,7 +42,7 @@ pub fn update_connected_players(
                 connected_players.on_player_connected(connection.id, entity.id());
             }
 
-            WsEvent::Disconnected { connection_id } => {
+            SocketConnectionEvent::Disconnected { connection_id } => {
                 match connected_players.on_player_disconnected(connection_id) {
                     Some(entity) => {
                         commands.entity(entity).despawn();
@@ -55,8 +53,6 @@ pub fn update_connected_players(
                     }
                 }
             }
-
-            _ => {}
         }
     }
 }

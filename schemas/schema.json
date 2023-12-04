@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "UserCommand",
+    "oneOf": [
+        {
+            "type": "object",
+            "required": [
+                "command"
+            ],
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "enum": [
+                        "get_server_info"
+                    ]
+                }
+            }
+        },
+        {
+            "type": "object",
+            "required": [
+                "command",
+                "with_stuff"
+            ],
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "enum": [
+                        "some_other_command"
+                    ]
+                },
+                "with_stuff": {
+                    "type": "string"
+                }
+            }
+        }
+    ]
+}

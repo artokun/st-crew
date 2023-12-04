@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use bevy::{log, tasks::block_on};
 use futures_util::{SinkExt, StreamExt};
+use serde::Serialize;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 
 use crate::ecs::plugins::websocket::WsMessage;
 
-use super::{ConnectionId, WsEvent, WsMessageType};
+use super::{ConnectionId, WsEvent};
 
 #[derive(Debug)]
 pub struct WsConnection {
@@ -67,7 +68,7 @@ impl WsConnection {
 
     pub fn send<T>(&self, message: T) -> Result<(), SendError>
     where
-        T: WsMessageType,
+        T: Serialize,
     {
         self.sender
             .try_send(message.to_message())

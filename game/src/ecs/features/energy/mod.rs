@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use super::players::SpawnPlayer;
 
 mod components;
+mod socket_events;
 mod systems;
 
 pub use components::Energy;
