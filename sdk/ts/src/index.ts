@@ -19,9 +19,10 @@ type Events = DynamicEvents & StaticEvents;
  * Represents the SpaceTradersRT class that extends EventEmitter.
  * This class provides functionality for connecting to a WebSocket server and sending/receiving messages.
  */
-export class SpaceTradersRT extends EventEmitter {
+export class SpaceTradersRT {
   private url: string;
   private ws: WebSocket | null;
+  #emitter: EventEmitter;
 
   private rpcId: number = 0;
 
@@ -32,7 +33,7 @@ export class SpaceTradersRT extends EventEmitter {
    * Initializes the URL and WebSocket properties.
    */
   constructor() {
-    super();
+    this.#emitter = new EventEmitter();
     this.url = 'ws://127.0.0.1:8081/ws';
     this.ws = null;
   }
@@ -45,7 +46,7 @@ export class SpaceTradersRT extends EventEmitter {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public emit<K extends keyof Events>(event: K | string | symbol, payload?: any): boolean {
-    return super.emit(event, payload);
+    return this.#emitter.emit(event, payload);
   }
 
   /**
@@ -55,11 +56,8 @@ export class SpaceTradersRT extends EventEmitter {
    * @param listener - The listener function to be called when the event is emitted.
    * @returns The current instance of the SpaceTradersRT class.
    */
-  public on<K extends keyof Events>(
-    event: K | string | symbol,
-    listener: (payload: Events[K]) => void
-  ): this {
-    return super.on(event, listener);
+  public on<K extends keyof Events>(event: K | string | symbol, listener: (payload: Events[K]) => void) {
+    this.#emitter.on(event, listener);
   }
 
   /**
@@ -93,10 +91,10 @@ export class SpaceTradersRT extends EventEmitter {
         return;
       }
 
-      if('id' in decoded && 'output' in decoded) {
+      if ('id' in decoded && 'output' in decoded) {
         const rpcCallback = this.rpcCallbacks[decoded.id];
 
-        if(!rpcCallback) {
+        if (!rpcCallback) {
           console.warn('received rpc response with no callback:', decoded);
           return;
         }
@@ -124,7 +122,7 @@ export class SpaceTradersRT extends EventEmitter {
     };
 
     return new Promise((resolve) => {
-      this.once('connect', () => {
+      this.#emitter.once('connect', () => {
         resolve(true);
       });
     });
