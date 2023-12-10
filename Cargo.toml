@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["crates/*", "game", "sdk/rust"]
+members = ["clients/term", "crates/*", "game", "sdk/rust"]
 default-members = ["game"]
 
 [workspace.dependencies]
