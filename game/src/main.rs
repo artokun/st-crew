@@ -1,6 +1,5 @@
 use bevy::{log::LogPlugin, prelude::*};
 
-mod api;
 mod ecs;
 
 use ecs::features::FeaturesPlugin;
