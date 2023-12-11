@@ -21,9 +21,6 @@ pub trait RpcCommand: ToSchema<'static> + DeserializeOwned + Send + Sync + 'stat
     type Output: ApiResponse;
 }
 
-/// Utility trait used with [`RouterExt`] to ensure the second element of a tuple type is a
-/// given type.
-///
 /// If you see it in type errors its most likely because the third argument to your handler isn't
 /// [`Rpc`].
 ///
