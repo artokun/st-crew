@@ -1,7 +1,7 @@
 mod destination;
-mod moving;
+mod immobile;
 mod speed;
 
 pub use destination::*;
-pub use moving::*;
+pub use immobile::*;
 pub use speed::*;

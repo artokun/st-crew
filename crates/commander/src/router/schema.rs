@@ -59,10 +59,10 @@ pub async fn get_schema(Extension(state): Extension<CommanderState>) -> ApiResul
                                                         // ),
         )
         .components(Some(schema.components.clone()))
-        .tags(Some([TagBuilder::new()
-            .name("todo")
-            .description(Some("Todo items management API"))
-            .build()]))
+        // .tags(Some([TagBuilder::new()
+        //     .name("todo")
+        //     .description(Some("Todo items management API"))
+        //     .build()]))
         .build();
 
     Ok(ApiResponse::new(StatusCode::OK).with_body(openapi))

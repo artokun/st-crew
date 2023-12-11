@@ -2363,6 +2363,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "bevy",
+ "bitflags 2.4.1",
  "futures-util",
  "rand",
  "schemars",
