@@ -13,14 +13,14 @@ pub fn update_positions(
         transform.translation.y +=
             (destination.y - transform.translation.y).signum() * speed.0 * time.delta_seconds();
 
-        log::info!(
-            "Moving {} from ({}, {}) to ({}, {})",
-            name,
-            transform.translation.x,
-            transform.translation.y,
-            destination.x,
-            destination.y
-        );
+        // log::info!(
+        //     "Moving {} from ({}, {}) to ({}, {})",
+        //     name,
+        //     transform.translation.x,
+        //     transform.translation.y,
+        //     destination.x,
+        //     destination.y
+        // );
 
         if (transform.translation.x - destination.x).abs() < 0.001
             && (transform.translation.y - destination.y).abs() < 0.001

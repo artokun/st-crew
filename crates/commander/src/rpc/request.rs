@@ -18,8 +18,8 @@ impl<C> RpcRequest<C>
 where
     C: RpcCommand,
 {
-    pub fn reply(self, response: C::Output) {
+    pub fn reply(self, response: impl Into<C::Output>) {
         // TODO: Do we want to handle this error?
-        self.reply_tx.send(response).ok();
+        self.reply_tx.send(response.into()).ok();
     }
 }

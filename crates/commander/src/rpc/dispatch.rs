@@ -3,8 +3,8 @@ use std::any::Any;
 use axum::{
     async_trait,
     extract::{FromRequest, Request},
-    http::StatusCode,
 };
+use st_commander_derive::ApiResponse;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -85,7 +85,7 @@ where
     ) -> Result<Vec<u8>, DispatchError> {
         let input = data_format
             .deserialize::<RpcCallInput<C>>(body)
-            .map_err(DispatchError::DeserializeInput)?
+            .map_err(DispatchError::BadInput)?
             .input;
 
         let output = self.call(input).await?;
@@ -95,46 +95,31 @@ where
                 id: call_id,
                 output,
             })
-            .map_err(DispatchError::SerializeOutput)?)
+            .map_err(DispatchError::BadOutput)?)
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, ApiResponse)]
 pub enum CallError {
+    /// The command was not handled by any system.
+    #[response(status = INTERNAL_SERVER_ERROR)]
     #[error("command was not executed")]
     Unhandled,
 }
 
-impl From<CallError> for ApiError {
-    fn from(err: CallError) -> Self {
-        ApiError::internal_server_error(err)
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, ApiResponse)]
 pub enum DispatchError {
+    #[response(status = BAD_REQUEST)]
     #[error("failed to deserialize input: {0}")]
-    DeserializeInput(Box<dyn std::error::Error + Send + Sync>),
+    BadInput(Box<dyn std::error::Error + Send + Sync>),
 
+    #[response(transparent)]
     #[error(transparent)]
     Call(#[from] CallError),
 
+    #[response(status = INTERNAL_SERVER_ERROR)]
     #[error("failed to serialize output: {0}")]
-    SerializeOutput(Box<dyn std::error::Error + Send + Sync>),
-}
-
-impl From<DispatchError> for ApiError {
-    fn from(err: DispatchError) -> Self {
-        match err {
-            DispatchError::DeserializeInput(err) => ApiError::new(StatusCode::BAD_REQUEST)
-                .with_name("bad_input")
-                .with_error(err),
-
-            DispatchError::Call(err) => ApiError::from(err),
-
-            DispatchError::SerializeOutput(err) => ApiError::internal_server_error(err),
-        }
-    }
+    BadOutput(Box<dyn std::error::Error + Send + Sync>),
 }
 
 #[axum::async_trait]
