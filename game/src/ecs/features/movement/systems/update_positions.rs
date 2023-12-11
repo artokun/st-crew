@@ -3,10 +3,11 @@ use bevy::{log, prelude::*};
 use crate::ecs::features::movement::components::{Destination, Immobile, Speed};
 
 pub fn update_positions(
-    mut query: Query<(&Name, &Speed, &Destination, &mut Transform), Without<Immobile>>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &Name, &Speed, &Destination, &mut Transform), Without<Immobile>>,
     time: Res<Time>,
 ) {
-    for (name, speed, destination, mut transform) in query.iter_mut() {
+    for (entity, name, speed, destination, mut transform) in query.iter_mut() {
         transform.translation.x +=
             (destination.x - transform.translation.x).signum() * speed.0 * time.delta_seconds();
         transform.translation.y +=
@@ -25,6 +26,8 @@ pub fn update_positions(
             && (transform.translation.y - destination.y).abs() < 0.001
         {
             transform.translation = destination.0;
+
+            commands.entity(entity).remove::<Destination>();
 
             log::info!(
                 "{} has arrived at ({}, {})",
