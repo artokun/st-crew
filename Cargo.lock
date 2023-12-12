@@ -2371,11 +2371,9 @@ version = "0.1.0"
 dependencies = [
  "darling",
  "proc-macro2",
- "quote",
  "syn 2.0.39",
  "to_snake_case",
  "toml",
- "utoipa-gen",
 ]
 
 [[package]]
