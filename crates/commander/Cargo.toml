@@ -5,6 +5,8 @@ edition = "2021"
 publish = false
 
 [dependencies]
+st_commander_derive.workspace = true
+
 thiserror.workspace = true
 
 serde.workspace = true
@@ -51,5 +53,6 @@ axum-extra.workspace = true
 
 schemars.workspace = true
 utoipa.workspace = true
+utoipa-redoc = "2.0"
 
 bevy.workspace = true

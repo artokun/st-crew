@@ -1,63 +1,52 @@
-use axum::{http::StatusCode, Extension};
+use axum::{response::Html, Extension, Json};
 use utoipa::openapi::{
-    tag::TagBuilder, Components, ComponentsBuilder, InfoBuilder, LicenseBuilder, OpenApi,
-    OpenApiBuilder,
+    Components, ComponentsBuilder, Info, InfoBuilder, LicenseBuilder, OpenApi, OpenApiBuilder,
+    Paths, PathsBuilder,
 };
+use utoipa_redoc::Redoc;
 
-use crate::response::{ApiResponse, ApiResult};
+use crate::response::ApiError;
 
 use super::CommanderState;
 
-#[derive(Default)]
 pub struct CommanderSchemaBuilder {
+    pub info: InfoBuilder,
+    pub paths: PathsBuilder,
     pub components: ComponentsBuilder,
+}
+
+impl Default for CommanderSchemaBuilder {
+    fn default() -> Self {
+        Self {
+            info: InfoBuilder::new(),
+            paths: PathsBuilder::new(),
+            components: ComponentsBuilder::new().schema_from::<ApiError>(),
+        }
+    }
 }
 
 impl CommanderSchemaBuilder {
     pub fn build(self) -> CommanderSchema {
         CommanderSchema {
+            info: self.info.build(),
+            paths: self.paths.build(),
             components: self.components.build(),
         }
     }
 }
 
 pub struct CommanderSchema {
+    pub info: Info,
+    pub paths: Paths,
     pub components: Components,
 }
 
-pub async fn get_schema(Extension(state): Extension<CommanderState>) -> ApiResult<OpenApi> {
+pub async fn get_schema(Extension(state): Extension<CommanderState>) -> Json<OpenApi> {
     let schema = &state.into_inner().schema;
 
     let openapi = OpenApiBuilder::new()
-        .info(
-            InfoBuilder::new()
-                .title("st_commander")
-                .version("0.1.0")
-                .description(Some(""))
-                .license(Some(LicenseBuilder::new().name("").build())),
-        )
-        .paths(
-            utoipa::openapi::path::PathsBuilder::new(), // .path(
-                                                        //     todo::__path_list_todos::path(),
-                                                        //     todo::__path_list_todos::path_item(Some("todo")),
-                                                        // )
-                                                        // .path(
-                                                        //     todo::__path_search_todos::path(),
-                                                        //     todo::__path_search_todos::path_item(Some("todo")),
-                                                        // )
-                                                        // .path(
-                                                        //     todo::__path_create_todo::path(),
-                                                        //     todo::__path_create_todo::path_item(Some("todo")),
-                                                        // )
-                                                        // .path(
-                                                        //     todo::__path_mark_done::path(),
-                                                        //     todo::__path_mark_done::path_item(Some("todo")),
-                                                        // )
-                                                        // .path(
-                                                        //     todo::__path_delete_todo::path(),
-                                                        //     todo::__path_delete_todo::path_item(Some("todo")),
-                                                        // ),
-        )
+        .info(schema.info.clone())
+        .paths(schema.paths.clone())
         .components(Some(schema.components.clone()))
         // .tags(Some([TagBuilder::new()
         //     .name("todo")
@@ -65,5 +54,9 @@ pub async fn get_schema(Extension(state): Extension<CommanderState>) -> ApiResul
         //     .build()]))
         .build();
 
-    Ok(ApiResponse::new(StatusCode::OK).with_body(openapi))
+    Json(openapi)
+}
+
+pub async fn get_redoc() -> Html<String> {
+    Html(Redoc::new("/schema.json").to_html())
 }

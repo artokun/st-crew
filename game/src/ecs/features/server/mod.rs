@@ -14,7 +14,7 @@ pub struct ServerPlugin;
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         app.register_command::<commands::get_server_info::GetServerInfoCommand>()
-            .get_endpoint(commands::get_server_info::route_get_server_info)
+            .get(commands::get_server_info::route_get_server_info)
             .add_systems(Update, commands::get_server_info::on_server_info_command);
 
         app.add_systems(Startup, systems::startup_socket_listener)

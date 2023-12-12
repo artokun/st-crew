@@ -1,4 +1,6 @@
+use core::panic;
 use std::{
+    any::TypeId,
     iter::once,
     net::SocketAddr,
     sync::{Arc, Mutex},
@@ -9,7 +11,11 @@ use axum::{
     Extension, Router,
 };
 use axum_extra::routing::{SecondElementIs, TypedPath};
-use bevy::{app::App, ecs::system::Resource, utils::HashMap};
+use bevy::{
+    app::App,
+    ecs::system::Resource,
+    utils::{tracing, HashMap},
+};
 use tokio::{
     net::{TcpListener, ToSocketAddrs},
     sync::{mpsc, oneshot},
@@ -21,12 +27,22 @@ use tower_http::{
     propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveRequestHeadersLayer,
     trace::TraceLayer,
+    validate_request::ValidateRequestHeaderLayer,
+};
+use utoipa::{
+    openapi::{
+        path::{OperationBuilder, ParameterBuilder},
+        request_body::RequestBodyBuilder,
+        Content, PathItem, PathItemType, Ref, RefOr, Required, ResponsesBuilder, Schema,
+    },
+    ToSchema,
 };
 
 use crate::{
     event::SocketConnectionEvent,
-    response::ApiError,
-    rpc::{RpcChannel, RpcCommand, RpcDispatch, RpcDispatcher},
+    response::{ApiError, ApiResponse},
+    router::accept_headers::AcceptHeaders,
+    rpc::{NoInput, RpcChannel, RpcCommand, RpcDispatch, RpcDispatcher, RpcEndpoint},
 };
 
 use crate::router::{CommanderSchemaBuilder, CommanderState};
@@ -54,12 +70,189 @@ impl CommanderServer {
     }
 }
 
+pub struct ThenRegisterEndpoint<'then, C> {
+    _command: std::marker::PhantomData<C>,
+
+    app: &'then mut App,
+}
+
+impl<'then, C> ThenRegisterEndpoint<'then, C>
+where
+    C: RpcCommand,
+{
+    fn add_operation_schema<T, P>(&mut self)
+    where
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app.with_schema(|mut schema| {
+            let params_schema = match P::schema().1 {
+                RefOr::Ref(_) => panic!("params schema must be inline"),
+                RefOr::T(Schema::Object(params_schema)) => params_schema,
+                RefOr::T(_) => panic!("params schema must be an object"),
+            };
+
+            let mut operation_summary = None;
+            let mut operation_description = Vec::new();
+
+            let description = params_schema.description.unwrap_or_default();
+
+            #[cfg(debug_assertions)]
+            if description.is_empty() {
+                tracing::warn!("missing description for rpc route `{}`", T::Command::NAME);
+                tracing::warn!("    either no doc comment has been written, or the struct was");
+                tracing::warn!("    created without a following `{{ }}`. For example, if the");
+                tracing::warn!("    struct is `struct Foo;` instead of struct Foo {{ }}, doc");
+                tracing::warn!("    comments will be ignored.");
+            }
+
+            for entry in description.split('\n').filter(|line| !line.is_empty()) {
+                if operation_summary.is_none() {
+                    operation_summary = Some(entry.trim().to_string());
+                } else {
+                    operation_description.push(entry.trim());
+                }
+            }
+
+            let operation_description = operation_description.join("\n\n");
+
+            let mut operation = OperationBuilder::new()
+                .operation_id(Some(T::Command::NAME))
+                .summary(operation_summary)
+                .description(if !operation_description.is_empty() {
+                    Some(operation_description)
+                } else {
+                    None
+                });
+
+            {
+                let mut parameters = Vec::new();
+
+                for (prop_name, prop_schema) in params_schema.properties {
+                    // TODO: extract the rest of the props
+                    parameters.push(
+                        ParameterBuilder::new()
+                            .required(if params_schema.required.contains(&prop_name) {
+                                Required::True
+                            } else {
+                                Required::False
+                            })
+                            .name(prop_name)
+                            .schema(Some(prop_schema))
+                            .build(),
+                    );
+                }
+
+                operation = operation.parameters(Some(parameters));
+            }
+
+            // `NoInput` is special and means there is no request body.
+            if TypeId::of::<<T::Command as RpcCommand>::Input>() != TypeId::of::<NoInput>() {
+                schema.components = schema
+                    .components
+                    .schema_from::<<T::Command as RpcCommand>::Input>();
+
+                operation = operation.request_body(Some(
+                    RequestBodyBuilder::new()
+                        .content(
+                            "application/json",
+                            Content::new(Ref::from_schema_name(
+                                <T::Command as RpcCommand>::Input::schema().0,
+                            )),
+                        )
+                        .build(),
+                ));
+            }
+
+            operation = operation.responses(
+                <T::Command as RpcCommand>::Output::apply_responses(ResponsesBuilder::new())
+                    .build(),
+            );
+
+            schema.paths = schema
+                .paths
+                .path(P::PATH, PathItem::new(PathItemType::Get, operation.build()));
+            schema
+        });
+    }
+
+    pub fn get<H, T, P>(mut self, handler: H) -> &'then mut App
+    where
+        H: axum::handler::Handler<T, ()>,
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app
+            .with_router(|router| router.route(P::PATH, axum::routing::get(handler)));
+
+        self.add_operation_schema::<T, P>();
+
+        self.app
+    }
+
+    pub fn post<H, T, P>(mut self, handler: H) -> &'then mut App
+    where
+        H: axum::handler::Handler<T, ()>,
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app
+            .with_router(|router| router.route(P::PATH, axum::routing::post(handler)));
+
+        self.add_operation_schema::<T, P>();
+
+        self.app
+    }
+
+    pub fn put<H, T, P>(mut self, handler: H) -> &'then mut App
+    where
+        H: axum::handler::Handler<T, ()>,
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app
+            .with_router(|router| router.route(P::PATH, axum::routing::put(handler)));
+
+        self.add_operation_schema::<T, P>();
+
+        self.app
+    }
+
+    pub fn patch<H, T, P>(mut self, handler: H) -> &'then mut App
+    where
+        H: axum::handler::Handler<T, ()>,
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app
+            .with_router(|router| router.route(P::PATH, axum::routing::patch(handler)));
+
+        self.add_operation_schema::<T, P>();
+
+        self.app
+    }
+
+    pub fn delete<H, T, P>(mut self, handler: H) -> &'then mut App
+    where
+        H: axum::handler::Handler<T, ()>,
+        T: SecondElementIs<P> + RpcEndpoint<Command = C> + 'static,
+        P: TypedPath + ToSchema<'static>,
+    {
+        self.app
+            .with_router(|router| router.route(P::PATH, axum::routing::delete(handler)));
+
+        self.add_operation_schema::<T, P>();
+
+        self.app
+    }
+}
+
 pub trait CommanderServerExt {
     fn with_schema<F>(&mut self, func: F) -> &mut Self
     where
         F: FnOnce(CommanderSchemaBuilder) -> CommanderSchemaBuilder;
 
-    fn register_command<C>(&mut self) -> &mut Self
+    fn register_command<C>(&mut self) -> ThenRegisterEndpoint<C>
     where
         C: RpcCommand + 'static;
 
@@ -71,31 +264,31 @@ pub trait CommanderServerExt {
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath;
+        P: TypedPath + ToSchema<'static>;
 
     fn post_endpoint<H, T, P>(&mut self, handler: H) -> &mut Self
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath;
+        P: TypedPath + ToSchema<'static>;
 
     fn put_endpoint<H, T, P>(&mut self, handler: H) -> &mut Self
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath;
+        P: TypedPath + ToSchema<'static>;
 
     fn patch_endpoint<H, T, P>(&mut self, handler: H) -> &mut Self
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath;
+        P: TypedPath + ToSchema<'static>;
 
     fn delete_endpoint<H, T, P>(&mut self, handler: H) -> &mut Self
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath;
+        P: TypedPath + ToSchema<'static>;
 }
 
 impl CommanderServerExt for App {
@@ -120,7 +313,7 @@ impl CommanderServerExt for App {
         self
     }
 
-    fn register_command<C>(&mut self) -> &mut Self
+    fn register_command<C>(&mut self) -> ThenRegisterEndpoint<C>
     where
         C: RpcCommand + 'static,
     {
@@ -138,12 +331,19 @@ impl CommanderServerExt for App {
         self.insert_resource(RpcChannel::new(rpc_rx));
 
         self.with_schema(|mut schema| {
-            schema.components = schema.components.schema_from::<C>();
-            schema.components = schema.components.schema_from::<C::Output>();
+            schema.components = schema.components.schema_from::<C>(); // ToSchema<'static> + Serialize +
+
+            schema.components = C::Output::apply_components(schema.components);
+
+            // schema.components = schema.components.schema_from::<C::Output>();
             schema
         });
 
-        self
+        ThenRegisterEndpoint {
+            _command: std::marker::PhantomData,
+
+            app: self,
+        }
     }
 
     fn with_router<F>(&mut self, func: F) -> &mut Self
@@ -170,7 +370,7 @@ impl CommanderServerExt for App {
     where
         H: axum::handler::Handler<T, ()>,
         T: SecondElementIs<P> + 'static,
-        P: TypedPath,
+        P: TypedPath + ToSchema<'static>,
     {
         self.with_router(|router| router.route(P::PATH, axum::routing::get(handler)));
 
@@ -234,14 +434,29 @@ impl CommanderServer {
             .take()
             .expect("commander server has already been started");
 
+        let schema_router = Router::new()
+            .route(
+                "/schema.json",
+                axum::routing::get(crate::router::get_schema)
+                    // The schema route only accepts the `application/json` mime type
+                    .layer(ValidateRequestHeaderLayer::custom(AcceptHeaders::new([
+                        mime::APPLICATION_JSON,
+                    ]))),
+            )
+            .route(
+                "/redoc",
+                axum::routing::get(crate::router::get_redoc)
+                    // The schema route only accepts the `text/html` mime type
+                    .layer(ValidateRequestHeaderLayer::custom(AcceptHeaders::new([
+                        mime::TEXT_HTML,
+                    ]))),
+            );
+
         let api_router = router
-            .route("/schema", axum::routing::get(crate::router::get_schema))
             .fallback(handler_404)
             .layer(axum::middleware::from_fn(
                 crate::body::layer::transform_response,
-            ))
-            // Add compression here since it isn't supported by the streaming layer
-            .layer(CompressionLayer::new());
+            ));
 
         // let sse_router = Router::new()
         //     // SSE layers only accept a single mime type
@@ -255,7 +470,10 @@ impl CommanderServer {
         let router = Router::new()
             // We construct the router in this way since the socket routes have different
             // layer requirements compared to the other routes.
+            .merge(schema_router)
             .merge(api_router)
+            // Add compression here since it isn't supported by the streaming layer
+            .layer(CompressionLayer::new())
             // .merge(sse_router)
             .merge(socket_router)
             // Ubiquitous layers
