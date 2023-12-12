@@ -6,7 +6,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
-st_crew_sdk.workspace = true
 st_commander.workspace = true
 st_commander_derive.workspace = true
 
@@ -29,7 +28,6 @@ bevy = { workspace = true, default-features = false, features = [
 axum.workspace = true
 axum-extra.workspace = true
 
-schemars.workspace = true
 utoipa.workspace = true
 
 # Enable a small amount of optimization in debug mode

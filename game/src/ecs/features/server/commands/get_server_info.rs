@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use crate::ecs::features::server::models::ServerInfo;
 
 #[derive(Deserialize, ToSchema)]
+/// Get information about the current state of the server.
 pub struct GetServerInfoCommand;
 
 #[axum::async_trait]

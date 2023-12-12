@@ -7,7 +7,6 @@ default-members = ["game"]
 [workspace.dependencies]
 st_commander = { path = "crates/commander" }
 st_commander_derive = { path = "crates/commander_derive" }
-st_crew_sdk = { path = "sdk/rust" }
 
 rand = "0.8"
 async-channel = "2.1"
@@ -24,5 +23,4 @@ tokio = { version = "1.0", default-features = false }
 axum = { version = "0.7", default-features = false }
 axum-extra = { version = "0.9", features = ["typed-header", "typed-routing"] }
 
-schemars = "0.8"
 utoipa = { version = "4.1", features = ["debug", "rc_schema"] }

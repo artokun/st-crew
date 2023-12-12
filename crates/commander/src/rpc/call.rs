@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 
 use super::RpcCommand;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub(crate) struct RpcCallCommand {
     pub id: u64,
     pub command: Cow<'static, str>,

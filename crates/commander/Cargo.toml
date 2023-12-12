@@ -51,7 +51,6 @@ axum = { workspace = true, features = [
 ] }
 axum-extra.workspace = true
 
-schemars.workspace = true
 utoipa.workspace = true
 utoipa-redoc = "2.0"
 

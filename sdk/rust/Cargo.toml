@@ -6,7 +6,5 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 
-schemars = { version = "0.8", optional = true }
-
 [dev-dependencies]
 serde_json = "1.0"

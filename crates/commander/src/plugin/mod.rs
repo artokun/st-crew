@@ -17,7 +17,7 @@ impl Plugin for CommanderPlugin {
     fn build(&self, app: &mut App) {
         let (events_tx, events_rx) = async_channel::unbounded();
 
-        app.insert_resource(CommanderServer::new(events_tx));
+        app.insert_non_send_resource(CommanderServer::new(events_tx));
 
         app.add_event::<SocketConnectionEvent>()
             .insert_resource(SocketConnectionEventChannel::new(events_rx))

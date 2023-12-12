@@ -3,8 +3,8 @@ use st_commander::{connections::SocketConnections, event::SocketConnectionEvent,
 
 use super::{models::ServerInfo, socket_events::ServerInfoSocketEvent};
 
-pub fn startup_socket_listener(mut server: ResMut<CommanderServer>) {
-    let addr = block_on(server.start_listening("127.0.0.1:8081"))
+pub fn startup_socket_listener(mut server: NonSendMut<CommanderServer>) {
+    let addr = block_on(server.start_listening("127.0.0.1:8081", Some("./schemas".as_ref())))
         .expect("failed to wait for server to be ready");
 
     log::info!("listening on {}", addr);

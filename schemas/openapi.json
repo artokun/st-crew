@@ -1,0 +1,341 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "st_crew",
+    "description": "Stuff and things",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/players/:uuid": {
+      "get": {
+        "summary": "Get player info",
+        "description": "Get information about a player.",
+        "operationId": "get_player_info",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPlayerInfoInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerInfo"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The command was not handled by any system.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "error",
+                        "message"
+                      ],
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "example": "unhandled"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "command was not executed"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server-info": {
+      "get": {
+        "summary": "Get server info",
+        "description": "Get information about the current state of the server.",
+        "operationId": "get_server_info",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The command was not handled by any system.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "error",
+                        "message"
+                      ],
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "example": "unhandled"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "command was not executed"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "not_found"
+          },
+          "message": {
+            "type": "string",
+            "example": "The requested resource was not found."
+          }
+        }
+      },
+      "Command": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GetServerInfoCommand"
+              },
+              {
+                "$ref": "#/components/schemas/GetPlayerInfoCommand"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "command",
+              "mapping": {
+                "get_player_info": "#/components/schemas/GetPlayerInfoCommand",
+                "get_server_info": "#/components/schemas/GetServerInfoCommand"
+              }
+            }
+          }
+        ]
+      },
+      "GetPlayerInfoCommand": {
+        "type": "object",
+        "required": [
+          "command",
+          "input"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "get_player_info"
+            ]
+          },
+          "input": {
+            "$ref": "#/components/schemas/GetPlayerInfoInput"
+          }
+        }
+      },
+      "GetPlayerInfoCommandResult": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PlayerInfo"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "error",
+                  "message"
+                ],
+                "properties": {
+                  "error": {
+                    "type": "string",
+                    "example": "unhandled"
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "command was not executed"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "GetPlayerInfoInput": {
+        "type": "object",
+        "required": [
+          "uuid"
+        ],
+        "properties": {
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "GetServerInfoCommand": {
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "get_server_info"
+            ]
+          }
+        }
+      },
+      "GetServerInfoCommandResult": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ServerInfo"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "error",
+                  "message"
+                ],
+                "properties": {
+                  "error": {
+                    "type": "string",
+                    "example": "unhandled"
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "command was not executed"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "PlayerInfo": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerInfo": {
+        "type": "object",
+        "required": [
+          "connectedClients"
+        ],
+        "properties": {
+          "connectedClients": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "oath2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://localhost/authorization/token",
+            "tokenUrl": "https://localhost/token/url",
+            "scopes": {
+              "edit:items": "edit my items",
+              "read:items": "read my items"
+            }
+          },
+          "password": {
+            "tokenUrl": "https://localhost/oauth/token",
+            "refreshUrl": "https://localhost/refresh/token",
+            "scopes": {
+              "edit:items": "edit my items",
+              "read:items": "read my items"
+            }
+          }
+        }
+      }
+    }
+  }
+}

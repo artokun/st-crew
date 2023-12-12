@@ -1,10 +1,5 @@
 use core::panic;
-use std::{
-    any::TypeId,
-    iter::once,
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-};
+use std::{any::TypeId, iter::once, net::SocketAddr, path::Path};
 
 use axum::{
     http::{header, request::Parts, HeaderName, HeaderValue, StatusCode},
@@ -13,7 +8,6 @@ use axum::{
 use axum_extra::routing::{SecondElementIs, TypedPath};
 use bevy::{
     app::App,
-    ecs::system::Resource,
     utils::{tracing, HashMap},
 };
 use tokio::{
@@ -41,19 +35,18 @@ use utoipa::{
 use crate::{
     event::SocketConnectionEvent,
     response::{ApiError, ApiResponse},
-    router::accept_headers::AcceptHeaders,
+    router::{accept_headers::AcceptHeaders, CommandSchema},
     rpc::{NoInput, RpcChannel, RpcCommand, RpcDispatch, RpcDispatcher, RpcEndpoint},
 };
 
 use crate::router::{CommanderSchemaBuilder, CommanderState};
 
-#[derive(Resource)]
 pub struct CommanderServer {
     events_tx: async_channel::Sender<SocketConnectionEvent>,
 
     commands: HashMap<&'static str, Box<dyn RpcDispatch>>,
 
-    router: Arc<Mutex<Option<Router<()>>>>,
+    router: Option<Router<()>>,
 
     schema: Option<CommanderSchemaBuilder>,
 }
@@ -63,7 +56,7 @@ impl CommanderServer {
         Self {
             events_tx,
             commands: HashMap::new(),
-            router: Arc::new(Mutex::new(Some(Router::new()))),
+            router: Some(Router::new()),
 
             schema: Some(CommanderSchemaBuilder::default()),
         }
@@ -148,10 +141,6 @@ where
 
             // `NoInput` is special and means there is no request body.
             if TypeId::of::<<T::Command as RpcCommand>::Input>() != TypeId::of::<NoInput>() {
-                schema.components = schema
-                    .components
-                    .schema_from::<<T::Command as RpcCommand>::Input>();
-
                 operation = operation.request_body(Some(
                     RequestBodyBuilder::new()
                         .content(
@@ -172,6 +161,7 @@ where
             schema.paths = schema
                 .paths
                 .path(P::PATH, PathItem::new(PathItemType::Get, operation.build()));
+
             schema
         });
     }
@@ -298,7 +288,7 @@ impl CommanderServerExt for App {
     {
         let mut setup = self
             .world
-            .get_resource_mut::<CommanderServer>()
+            .get_non_send_resource_mut::<CommanderServer>()
             .expect("commander plugin not initialized");
 
         let new_schema = func(
@@ -319,7 +309,7 @@ impl CommanderServerExt for App {
     {
         let mut setup = self
             .world
-            .get_resource_mut::<CommanderServer>()
+            .get_non_send_resource_mut::<CommanderServer>()
             .expect("commander plugin not initialized");
 
         let (rpc_tx, rpc_rx) = mpsc::unbounded_channel();
@@ -331,11 +321,79 @@ impl CommanderServerExt for App {
         self.insert_resource(RpcChannel::new(rpc_rx));
 
         self.with_schema(|mut schema| {
-            schema.components = schema.components.schema_from::<C>(); // ToSchema<'static> + Serialize +
-
             schema.components = C::Output::apply_components(schema.components);
 
-            // schema.components = schema.components.schema_from::<C::Output>();
+            let (command_name, command_schema) = C::schema();
+
+            let (command_title, command_description) = match command_schema {
+                RefOr::Ref(_) => panic!("command schema must be inline"),
+
+                RefOr::T(Schema::Object(command_schema)) => {
+                    (command_schema.title, command_schema.description)
+                }
+
+                RefOr::T(_) => panic!("command schema must be an object"),
+            };
+
+            // `NoInput` is special and means there is no request body.
+            let input = if TypeId::of::<C::Input>() != TypeId::of::<NoInput>() {
+                let (input_name, input_schema) = C::Input::schema();
+
+                schema.components = schema.components.schema(input_name, input_schema);
+
+                Some(Ref::from_schema_name(input_name))
+            } else {
+                None
+            };
+
+            // Extract the schemas from the responses so we can build the Command schema later
+            let responses = C::Output::apply_responses(ResponsesBuilder::new())
+                .build()
+                .responses;
+
+            schema.commands.push(CommandSchema {
+                id: C::NAME,
+
+                name: command_name,
+                title: command_title,
+                description: command_description,
+
+                input,
+                responses,
+            });
+
+            // let command_type_name = std::any::type_name::<C>();
+
+            // let command_type_name = command_type_name
+            //     .split('<')
+            //     .next()
+            //     .unwrap_or(command_type_name)
+            //     .split("::")
+            //     .last()
+            //     .expect("failed to get type name");
+
+            // schema
+            //     .jsonschema
+            //     .generator
+            //     .definitions_mut()
+            //     .insert(command_type_name.to_string(), C::Input::to_json_schema());
+
+            // let output_type_name = std::any::type_name::<C::Output>();
+
+            // let output_type_name = output_type_name
+            //     .split('<')
+            //     .next()
+            //     .unwrap_or(output_type_name)
+            //     .split("::")
+            //     .last()
+            //     .expect("failed to get type name");
+
+            // schema
+            //     .jsonschema
+            //     .generator
+            //     .definitions_mut()
+            //     .insert(output_type_name.to_string(), C::Output::to_json_schema());
+
             schema
         });
 
@@ -350,18 +408,19 @@ impl CommanderServerExt for App {
     where
         F: FnOnce(Router<()>) -> Router<()>,
     {
-        let setup = self
+        let mut setup = self
             .world
-            .get_resource_mut::<CommanderServer>()
+            .get_non_send_resource_mut::<CommanderServer>()
             .expect("commander plugin not initialized");
 
-        let mut router = setup.router.lock().expect("router lock poisoned");
+        let new_router = func(
+            setup
+                .router
+                .take()
+                .expect("commander plugin already started"),
+        );
 
-        let new_router = func(router.take().expect("commander plugin already started"));
-
-        router.replace(new_router);
-
-        drop(router);
+        setup.router.replace(new_router);
 
         self
     }
@@ -426,23 +485,30 @@ impl CommanderServer {
     pub fn start_listening(
         &mut self,
         addr: impl ToSocketAddrs + Send + 'static,
+        schema_path: Option<&Path>,
     ) -> oneshot::Receiver<SocketAddr> {
         let router = self
             .router
-            .lock()
-            .expect("commander router lock poisoned")
             .take()
             .expect("commander server has already been started");
 
         let schema_router = Router::new()
             .route(
-                "/schema.json",
-                axum::routing::get(crate::router::get_schema)
+                "/openapi.json",
+                axum::routing::get(crate::router::get_openapi_schema)
                     // The schema route only accepts the `application/json` mime type
                     .layer(ValidateRequestHeaderLayer::custom(AcceptHeaders::new([
                         mime::APPLICATION_JSON,
                     ]))),
             )
+            // .route(
+            //     "/schema.json",
+            //     axum::routing::get(crate::router::get_json_schema)
+            //         // The schema route only accepts the `application/json` mime type
+            //         .layer(ValidateRequestHeaderLayer::custom(AcceptHeaders::new([
+            //             mime::APPLICATION_JSON,
+            //         ]))),
+            // )
             .route(
                 "/redoc",
                 axum::routing::get(crate::router::get_redoc)
@@ -523,6 +589,27 @@ impl CommanderServer {
                     ),
             );
 
+        let schema = self
+            .schema
+            .take()
+            .expect("commander schema missing")
+            .build();
+
+        if let Some(schema_path) = schema_path {
+            let absolute_path = std::fs::canonicalize(schema_path).expect("failed to canonicalize");
+
+            tracing::info!("writing schemas to {}", absolute_path.display());
+
+            // Write the different schemas to disk
+            if let Err(err) = std::fs::write(
+                absolute_path.join("openapi.json"),
+                serde_json::to_string_pretty(&schema.build())
+                    .expect("failed to serialize openapi schema"),
+            ) {
+                tracing::error!("failed to write openapi.json: {}", err);
+            }
+        }
+
         let router = router.layer(Extension(CommanderState::new(
             self.events_tx.clone(),
             {
@@ -530,10 +617,7 @@ impl CommanderServer {
                 std::mem::swap(&mut self.commands, &mut commands);
                 commands
             },
-            self.schema
-                .take()
-                .expect("commander schema missing")
-                .build(),
+            schema,
         )));
 
         let (ready_tx, ready_rx) = oneshot::channel::<SocketAddr>();

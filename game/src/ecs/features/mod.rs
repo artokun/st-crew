@@ -2,7 +2,9 @@ use std::env;
 
 use bevy::app::{App, Plugin};
 use st_commander::CommanderServerExt;
-use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
+use utoipa::openapi::security::{
+    AuthorizationCode, Flow, HttpAuthScheme, HttpBuilder, OAuth2, Password, Scopes, SecurityScheme,
+};
 
 use self::{
     droids::DroidsPlugin, energy::EnergyPlugin, movement::MovementPlugin, players::PlayersPlugin,
@@ -27,10 +29,38 @@ impl Plugin for FeaturesPlugin {
                 .description(Some(env!("CARGO_PKG_DESCRIPTION")));
             // .terms_of_service(Some("https://st"));
 
-            schema.components = schema.components.security_scheme(
-                "api_key",
-                SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("apikey"))),
-            );
+            schema.components = schema
+                .components
+                .security_scheme(
+                    "jwt",
+                    SecurityScheme::Http(
+                        HttpBuilder::new()
+                            .scheme(HttpAuthScheme::Bearer)
+                            .bearer_format("JWT")
+                            .build(),
+                    ),
+                )
+                .security_scheme(
+                    "oath2",
+                    SecurityScheme::OAuth2(OAuth2::new([
+                        Flow::Password(Password::with_refresh_url(
+                            "https://localhost/oauth/token",
+                            Scopes::from_iter([
+                                ("edit:items", "edit my items"),
+                                ("read:items", "read my items"),
+                            ]),
+                            "https://localhost/refresh/token",
+                        )),
+                        Flow::AuthorizationCode(AuthorizationCode::new(
+                            "https://localhost/authorization/token",
+                            "https://localhost/token/url",
+                            Scopes::from_iter([
+                                ("edit:items", "edit my items"),
+                                ("read:items", "read my items"),
+                            ]),
+                        )),
+                    ])),
+                );
 
             schema
         })

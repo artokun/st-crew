@@ -327,22 +327,26 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                         .content(
                             "application/json",
                             utoipa::openapi::Content::new(utoipa::openapi::schema::Schema::from(
-                                utoipa::openapi::ObjectBuilder::new()
-                                    .property(
-                                        "error",
+                                utoipa::openapi::AllOfBuilder::new()
+                                    .item(utoipa::openapi::Ref::from_schema_name("ApiError"))
+                                    .item(
                                         utoipa::openapi::ObjectBuilder::new()
-                                            .schema_type(utoipa::openapi::SchemaType::String)
-                                            .enum_values(Some(vec![serde_json::json!(#err_name)])),
-                                    )
-                                    .required("error")
-                                    .property(
-                                        "message",
-                                        utoipa::openapi::ObjectBuilder::new()
-                                            .schema_type(utoipa::openapi::SchemaType::String)
-                                            .enum_values(Some(vec![serde_json::json!(#err_message)])),
-                                    )
-                                    .required("message")
-                                    .build(),
+                                            .property(
+                                                "error",
+                                                utoipa::openapi::ObjectBuilder::new()
+                                                    .schema_type(utoipa::openapi::SchemaType::String)
+                                                    .example(Some(serde_json::json!(#err_name))),
+                                            )
+                                            .required("error")
+                                            .property(
+                                                "message",
+                                                utoipa::openapi::ObjectBuilder::new()
+                                                    .schema_type(utoipa::openapi::SchemaType::String)
+                                                    .example(Some(serde_json::json!(#err_message))),
+                                            )
+                                            .required("message")
+                                            .build()
+                                    ),
                             )),
                         )
                         .build()
