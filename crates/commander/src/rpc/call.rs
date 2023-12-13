@@ -6,20 +6,10 @@ use utoipa::ToSchema;
 use super::RpcCommand;
 
 #[derive(Debug, Deserialize, ToSchema)]
-pub(crate) struct RpcCallCommand {
+pub(crate) struct RpcCall<I> {
     pub id: u64,
     pub command: Cow<'static, str>,
-}
-
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-pub(crate) struct RpcCall<C>
-where
-    C: RpcCommand,
-{
-    pub id: u64,
-    pub command: Cow<'static, str>,
-    pub input: C::Input,
+    pub input: I,
 }
 
 #[derive(Debug, Serialize)]

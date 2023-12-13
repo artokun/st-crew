@@ -91,7 +91,7 @@ where
             unsafe { std::mem::transmute_copy(&()) }
         } else {
             data_format
-                .deserialize::<RpcCall<C>>(body)
+                .deserialize::<RpcCall<C::Input>>(body)
                 .map_err(DispatchError::BadInput)?
                 .input
         };

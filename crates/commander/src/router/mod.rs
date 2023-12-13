@@ -14,6 +14,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use serde::de::IgnoredAny;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -22,7 +23,7 @@ use crate::{
     data_format::DataFormat,
     event::SocketConnectionEvent,
     response::ApiError,
-    rpc::{DispatchError, RpcCallCommand},
+    rpc::{DispatchError, RpcCall},
 };
 
 pub mod accept_headers;
@@ -34,11 +35,9 @@ pub use state::*;
 
 pub(crate) async fn ws_handler(
     ws: WebSocketUpgrade,
+    data_format: DataFormat,
     Extension(state): Extension<CommanderState>,
 ) -> Response {
-    // TODO: derive this from headers
-    let data_format = DataFormat::Json;
-
     ws.on_upgrade(move |socket| handle_socket(socket, state.into_inner(), data_format))
 }
 
@@ -132,11 +131,11 @@ impl SocketConnectionListener {
     }
 
     async fn on_read(&mut self, message: Message) -> Result<(), ConnectionClosed> {
-        let Message::Binary(message) = message else {
+        let Message::Binary(bytes) = message else {
             return Ok(());
         };
 
-        if let Err(err) = self.handle_dispatch(message).await {
+        if let Err(err) = self.handle_dispatch(bytes).await {
             if matches!(
                 err,
                 HandleDispatchError::Reply(SendError::ConnectionClosed(_))
@@ -163,7 +162,7 @@ impl SocketConnectionListener {
     async fn handle_dispatch(&mut self, bytes: Vec<u8>) -> Result<(), HandleDispatchError> {
         let rpc_call = self
             .data_format
-            .deserialize::<RpcCallCommand>(&bytes)
+            .deserialize::<RpcCall<IgnoredAny>>(&bytes)
             .map_err(HandleDispatchError::DeserializeCommand)?;
 
         let Some(command) = self.state.commands.get(rpc_call.command.as_ref()) else {

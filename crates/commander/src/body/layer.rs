@@ -6,7 +6,6 @@ use axum::{
     response::{IntoResponse, Response},
     Form, Json,
 };
-use mime::MimeIter;
 
 use crate::data_format::DataFormat;
 
@@ -19,31 +18,7 @@ pub(crate) async fn transform_response(request: Request, next: Next) -> Response
         .get_all(&header::ACCEPT)
         .into_iter()
         .filter_map(|header| header.to_str().ok())
-        .find_map(|header| {
-            let mut best_quality = (0.0, None);
-
-            for mime in MimeIter::new(header).filter_map(Result::ok) {
-                let format = match mime.essence_str() {
-                    "*/*" | "application/*" | "application/json" => DataFormat::Json,
-                    "application/msgpack" => DataFormat::MsgPack,
-                    "application/x-www-form-urlencoded" => DataFormat::Form,
-                    _ => continue,
-                };
-
-                let Some(quality) = mime
-                    .get_param("q")
-                    .and_then(|quality| quality.as_str().parse::<f32>().ok())
-                else {
-                    return Some(format);
-                };
-
-                if quality > best_quality.0 {
-                    best_quality = (quality, Some(format));
-                }
-            }
-
-            best_quality.1
-        })
+        .find_map(DataFormat::parse_header)
     else {
         // We require the client to send an Accept header, so if it's missing we
         // need to return an error with no body.
@@ -64,8 +39,14 @@ pub(crate) async fn transform_response(request: Request, next: Next) -> Response
         match body_format {
             DataFormat::Json => (parts, Json(body)).into_response(),
 
-            DataFormat::MsgPack => {
-                let bytes = match rmp_serde::encode::to_vec_named(&body) {
+            DataFormat::MsgPack { named } => {
+                let result = if named {
+                    rmp_serde::to_vec_named(&body)
+                } else {
+                    rmp_serde::to_vec(&body)
+                };
+
+                let bytes = match result {
                     Ok(res) => res,
 
                     Err(err) => {
