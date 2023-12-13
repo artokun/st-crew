@@ -14,7 +14,7 @@ pub use request::*;
 use crate::response::ApiResponse;
 
 #[axum::async_trait]
-pub trait RpcCommand: ToSchema<'static> + DeserializeOwned + Send + Sync + 'static {
+pub trait RpcCommand: ToSchema<'static> + Send + Sync + 'static {
     const NAME: &'static str;
 
     type Input: ToSchema<'static> + DeserializeOwned + Send + Sync + 'static;

@@ -1,19 +1,21 @@
+use tokio::sync::mpsc;
+
+use crate::event::{payload::EventPayload, SocketEvent};
+
 mod connection_id;
 
 pub use connection_id::*;
-
-use crate::event::{payload::EventPayload, SocketEvent};
 
 #[derive(Debug)]
 pub struct SocketConnection {
     pub id: ConnectionId,
 
-    pub(crate) sender: async_channel::Sender<Box<dyn erased_serde::Serialize + Send + Sync>>,
+    pub(crate) sender: mpsc::UnboundedSender<Box<dyn erased_serde::Serialize + Send + Sync>>,
 }
 
 impl SocketConnection {
     pub(crate) fn new(
-        sender: async_channel::Sender<Box<dyn erased_serde::Serialize + Send + Sync>>,
+        sender: mpsc::UnboundedSender<Box<dyn erased_serde::Serialize + Send + Sync>>,
     ) -> Self {
         Self {
             id: ConnectionId::new(),
@@ -29,7 +31,7 @@ impl SocketConnection {
         // TODO(trevin): add a debug mode check to ensure it's added to the schema
 
         self.sender
-            .try_send(Box::new(EventPayload {
+            .send(Box::new(EventPayload {
                 event: E::NAME,
                 payload: event,
             }))

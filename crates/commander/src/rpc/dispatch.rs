@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 use axum::{
     async_trait,
@@ -14,7 +14,7 @@ use crate::{
     rpc::{RpcCommand, RpcRequest},
 };
 
-use super::{RpcCallInput, RpcReply};
+use super::{RpcCall, RpcReply};
 
 #[async_trait]
 pub trait RpcDispatch: Send + Sync {
@@ -83,10 +83,18 @@ where
         data_format: DataFormat,
         body: &[u8],
     ) -> Result<Vec<u8>, DispatchError> {
-        let input = data_format
-            .deserialize::<RpcCallInput<C>>(body)
-            .map_err(DispatchError::BadInput)?
-            .input;
+        let input = if TypeId::of::<C::Input>() == TypeId::of::<()>() {
+            // I wonder if this is safe... Technically `()` is a zero-sized type, so it
+            // should be safe to transmute it to itself. Technically `TypeId` is not
+            // guaranteed to be unique, though it's absolutely incredibly unlikely to
+            // not be so it's probably fine. Maybe.
+            unsafe { std::mem::transmute_copy(&()) }
+        } else {
+            data_format
+                .deserialize::<RpcCall<C>>(body)
+                .map_err(DispatchError::BadInput)?
+                .input
+        };
 
         let output = self.call(input).await?;
 

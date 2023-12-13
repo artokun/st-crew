@@ -1,12 +1,15 @@
+use bevy::prelude::Deref;
 use tokio::sync::oneshot;
 
 use super::RpcCommand;
 
+#[derive(Deref)]
 pub struct RpcRequest<C>
 where
     C: RpcCommand,
 {
-    pub input: C::Input,
+    #[deref]
+    pub(super) input: C::Input,
 
     pub(super) reply_tx: oneshot::Sender<C::Output>,
 }

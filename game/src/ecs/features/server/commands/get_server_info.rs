@@ -3,7 +3,7 @@ use bevy::{ecs::system::Res, log};
 use serde::Deserialize;
 use st_commander::{
     connections::SocketConnections,
-    rpc::{CallError, NoInput, Rpc, RpcCommand, RpcDispatcher},
+    rpc::{CallError, Rpc, RpcCommand, RpcDispatcher},
 };
 use st_commander_derive::ApiResponse;
 use utoipa::ToSchema;
@@ -18,7 +18,7 @@ pub struct GetServerInfoCommand;
 impl RpcCommand for GetServerInfoCommand {
     const NAME: &'static str = "get_server_info";
 
-    type Input = NoInput;
+    type Input = ();
     type Output = GetServerInfoResult;
 }
 

@@ -36,7 +36,7 @@ use crate::{
     event::SocketConnectionEvent,
     response::{ApiError, ApiResponse},
     router::{accept_headers::AcceptHeaders, CommandSchema},
-    rpc::{NoInput, RpcChannel, RpcCommand, RpcDispatch, RpcDispatcher, RpcEndpoint},
+    rpc::{RpcChannel, RpcCommand, RpcDispatch, RpcDispatcher, RpcEndpoint},
 };
 
 use crate::router::{CommanderSchemaBuilder, CommanderState};
@@ -139,8 +139,8 @@ where
                 operation = operation.parameters(Some(parameters));
             }
 
-            // `NoInput` is special and means there is no request body.
-            if TypeId::of::<<T::Command as RpcCommand>::Input>() != TypeId::of::<NoInput>() {
+            // `()` is special and means there is no request body.
+            if TypeId::of::<<T::Command as RpcCommand>::Input>() != TypeId::of::<()>() {
                 operation = operation.request_body(Some(
                     RequestBodyBuilder::new()
                         .content(
@@ -335,8 +335,8 @@ impl CommanderServerExt for App {
                 RefOr::T(_) => panic!("command schema must be an object"),
             };
 
-            // `NoInput` is special and means there is no request body.
-            let input = if TypeId::of::<C::Input>() != TypeId::of::<NoInput>() {
+            // `()` is special and means there is no request body.
+            let input = if TypeId::of::<C::Input>() != TypeId::of::<()>() {
                 let (input_name, input_schema) = C::Input::schema();
 
                 schema.components = schema.components.schema(input_name, input_schema);

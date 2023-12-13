@@ -14,6 +14,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use tokio::sync::mpsc;
 
 use crate::{
     connection::ConnectionId,
@@ -46,7 +47,7 @@ async fn handle_socket(
     state: Arc<InnerCommanderState>,
     data_format: DataFormat,
 ) {
-    let (write_tx, write_rx) = async_channel::unbounded();
+    let (write_tx, write_rx) = mpsc::unbounded_channel();
 
     let connection = Arc::new(SocketConnection::new(write_tx));
 
@@ -90,7 +91,7 @@ struct SocketConnectionListener {
     write: SplitSink<WebSocket, Message>,
     read: SplitStream<WebSocket>,
 
-    write_rx: async_channel::Receiver<Box<dyn erased_serde::Serialize + Send + Sync>>,
+    write_rx: mpsc::UnboundedReceiver<Box<dyn erased_serde::Serialize + Send + Sync>>,
 }
 
 impl SocketConnectionListener {
@@ -98,7 +99,7 @@ impl SocketConnectionListener {
         loop {
             tokio::select! {
                 message = self.write_rx.recv() => {
-                    if let Ok(data) = message {
+                    if let Some(data) = message {
                         self.on_write(data).await
                     } else {
                         return;
@@ -115,6 +116,18 @@ impl SocketConnectionListener {
                     }
                 },
             };
+        }
+    }
+
+    async fn on_write(&mut self, data: Box<dyn erased_serde::Serialize + Send + Sync>) {
+        match self.data_format.serialize(&data) {
+            Ok(data) => {
+                let _ = self.write.send(Message::Binary(data)).await;
+            }
+
+            Err(err) => {
+                log::error!("failed to serialize data: {}", err);
+            }
         }
     }
 
@@ -145,18 +158,6 @@ impl SocketConnectionListener {
         }
 
         Ok(())
-    }
-
-    async fn on_write(&mut self, data: Box<dyn erased_serde::Serialize + Send + Sync>) {
-        match self.data_format.serialize(&data) {
-            Ok(data) => {
-                let _ = self.write.send(Message::Binary(data)).await;
-            }
-
-            Err(err) => {
-                log::error!("failed to serialize data: {}", err);
-            }
-        }
     }
 
     async fn handle_dispatch(&mut self, bytes: Vec<u8>) -> Result<(), HandleDispatchError> {

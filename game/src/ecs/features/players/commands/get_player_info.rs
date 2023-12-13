@@ -60,7 +60,7 @@ pub async fn route_get_player_info(
 
 pub fn on_player_info_command(rpc: Rpc<GetPlayerInfoCommand>, connections: Res<SocketConnections>) {
     for cmd in rpc {
-        log::info!("handling get player info command: {:?}", cmd.input.uuid);
+        log::info!("handling get player info command: {:?}", cmd.uuid);
 
         cmd.reply(PlayerInfo {
             name: "test".to_string(),
