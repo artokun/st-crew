@@ -6,7 +6,7 @@ mod dispatch;
 mod receiver;
 mod request;
 
-pub use call::*;
+pub(crate) use call::*;
 pub use dispatch::*;
 pub use receiver::*;
 pub use request::*;
