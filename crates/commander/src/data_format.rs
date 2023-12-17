@@ -8,6 +8,7 @@ use mime::MimeIter;
 pub enum DataFormat {
     Json,
     MsgPack { named: bool },
+    Cbor { packed: bool },
     Form,
 }
 
@@ -19,6 +20,7 @@ impl DataFormat {
         Ok(match self {
             DataFormat::Json => serde_json::from_slice(data)?,
             DataFormat::MsgPack { .. } => rmp_serde::from_slice(data)?,
+            DataFormat::Cbor { .. } => serde_cbor::from_slice(data)?,
             DataFormat::Form => serde_urlencoded::from_bytes(data)?,
         })
     }
@@ -38,6 +40,14 @@ impl DataFormat {
                     rmp_serde::to_vec_named(data)?
                 } else {
                     rmp_serde::to_vec(data)?
+                }
+            }
+
+            DataFormat::Cbor { packed } => {
+                if *packed {
+                    serde_cbor::ser::to_vec_packed(data)?
+                } else {
+                    serde_cbor::ser::to_vec(data)?
                 }
             }
 

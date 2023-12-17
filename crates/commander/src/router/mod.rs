@@ -45,6 +45,9 @@ pub(crate) enum WebsocketDataFormat {
     MsgPack,
     #[serde(rename = "msgpack_unnamed")]
     MsgPackUnnamed,
+    Cbor,
+    #[serde(rename = "cbor_packed")]
+    CborPacked,
     Form,
 }
 
@@ -58,6 +61,8 @@ pub(crate) async fn ws_handler(
         WebsocketDataFormat::Json => DataFormat::Json,
         WebsocketDataFormat::MsgPack => DataFormat::MsgPack { named: true },
         WebsocketDataFormat::MsgPackUnnamed => DataFormat::MsgPack { named: false },
+        WebsocketDataFormat::Cbor => DataFormat::Cbor { packed: false },
+        WebsocketDataFormat::CborPacked => DataFormat::Cbor { packed: true },
         WebsocketDataFormat::Form => DataFormat::Form,
     });
 
