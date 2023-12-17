@@ -35,10 +35,3 @@ impl RpcCommand for GetPlayerInfoCommand {
 pub struct GetPlayerInfoResult {
     pub name: String,
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "command")]
-pub enum Command {
-    GetServerInfo,
-    GetPlayerInfo { uuid: String },
-}

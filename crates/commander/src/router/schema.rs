@@ -51,6 +51,8 @@ impl CommanderSchemaBuilder {
         for command in self.commands {
             let command_entry_ref = {
                 let command_schema = ObjectBuilder::new()
+                    .title(command.title.as_ref())
+                    .description(command.description.as_ref())
                     .property(
                         "command",
                         ObjectBuilder::new()

@@ -173,6 +173,7 @@
       },
       "GetPlayerInfoCommand": {
         "type": "object",
+        "description": "Get information about a player.",
         "required": [
           "command",
           "input"
