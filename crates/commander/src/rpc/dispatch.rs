@@ -1,4 +1,4 @@
-use std::any::{Any, TypeId};
+use std::any::Any;
 
 use axum::{
     async_trait,
@@ -54,7 +54,7 @@ where
         Self { tx }
     }
 
-    pub async fn call(&self, input: impl Into<C::Input>) -> Result<C::Output, CallError> {
+    pub async fn call(&self, input: impl Into<C>) -> Result<C::Output, CallError> {
         let (reply_tx, reply_rx) = oneshot::channel();
 
         self.tx
@@ -83,18 +83,10 @@ where
         data_format: DataFormat,
         body: &[u8],
     ) -> Result<Vec<u8>, DispatchError> {
-        let input = if TypeId::of::<C::Input>() == TypeId::of::<()>() {
-            // I wonder if this is safe... Technically `()` is a zero-sized type, so it
-            // should be safe to transmute it to itself. Technically `TypeId` is not
-            // guaranteed to be unique, though it's absolutely incredibly unlikely to
-            // not be so it's probably fine. Maybe.
-            unsafe { std::mem::transmute_copy(&()) }
-        } else {
-            data_format
-                .deserialize::<RpcCall<C::Input>>(body)
-                .map_err(DispatchError::BadInput)?
-                .input
-        };
+        let input = data_format
+            .deserialize::<RpcCall<C>>(body)
+            .map_err(DispatchError::BadInput)?
+            .input;
 
         let output = self.call(input).await?;
 

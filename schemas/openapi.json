@@ -21,15 +21,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetPlayerInfoInput"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Success",
@@ -194,7 +185,7 @@
             ]
           },
           "input": {
-            "$ref": "#/components/schemas/GetPlayerInfoInput"
+            "$ref": "#/components/schemas/GetPlayerInfoCommand"
           }
         }
       },
@@ -227,18 +218,8 @@
               }
             ]
           }
-        ]
-      },
-      "GetPlayerInfoInput": {
-        "type": "object",
-        "required": [
-          "uuid"
         ],
-        "properties": {
-          "uuid": {
-            "type": "string"
-          }
-        }
+        "description": "Get information about a player."
       },
       "GetServerInfoCommand": {
         "type": "object",

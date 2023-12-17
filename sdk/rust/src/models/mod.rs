@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::command::RpcCommand;
+use crate::commands::RpcCommand;
 
 mod api_error;
 
@@ -21,7 +21,9 @@ pub struct GetServerInfoResult {
 }
 
 #[derive(Serialize)]
-pub struct GetPlayerInfoCommand {}
+pub struct GetPlayerInfoCommand {
+    pub uuid: String,
+}
 
 impl RpcCommand for GetPlayerInfoCommand {
     const NAME: &'static str = "get_player_info";

@@ -18,7 +18,6 @@ pub struct GetServerInfoCommand;
 impl RpcCommand for GetServerInfoCommand {
     const NAME: &'static str = "get_server_info";
 
-    type Input = ();
     type Output = GetServerInfoResult;
 }
 
@@ -45,7 +44,7 @@ pub async fn route_get_server_info(
 ) -> GetServerInfoResult {
     // TODO: check jwt token
 
-    rpc.call(()).await.into()
+    rpc.call(GetServerInfoCommand).await.into()
 }
 
 pub fn on_server_info_command(rpc: Rpc<GetServerInfoCommand>, connections: Res<SocketConnections>) {

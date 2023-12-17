@@ -1,5 +1,5 @@
 use core::panic;
-use std::{any::TypeId, iter::once, net::SocketAddr, path::Path};
+use std::{iter::once, net::SocketAddr, path::Path};
 
 use axum::{
     http::{header, request::Parts, HeaderName, HeaderValue, StatusCode},
@@ -28,6 +28,7 @@ use utoipa::{
         path::{OperationBuilder, ParameterBuilder},
         request_body::RequestBodyBuilder,
         Content, PathItem, PathItemType, Ref, RefOr, Required, ResponsesBuilder, Schema,
+        SchemaType,
     },
     ToSchema,
 };
@@ -118,6 +119,41 @@ where
                     None
                 });
 
+            let (command_name, command_schema) = T::Command::schema();
+
+            match command_schema {
+                RefOr::Ref(_) => unreachable!(),
+
+                RefOr::T(Schema::Object(command_schema))
+                    if command_schema.schema_type == SchemaType::Value
+                        && command_schema.default == Some(serde_json::Value::Null) =>
+                {
+                    // This command has no input, so we don't need to add a request body
+                }
+
+                RefOr::T(Schema::Object(mut command_schema)) => {
+                    // Any parameter not specified in the path is part of the request body
+
+                    command_schema
+                        .properties
+                        .retain(|prop_name, _| !params_schema.properties.contains_key(prop_name));
+
+                    command_schema
+                        .required
+                        .retain(|prop_name| !params_schema.properties.contains_key(prop_name));
+
+                    if !command_schema.properties.is_empty() {
+                        operation = operation.request_body(Some(
+                            RequestBodyBuilder::new()
+                                .content("application/json", Content::new(command_schema))
+                                .build(),
+                        ));
+                    }
+                }
+
+                RefOr::T(_) => unreachable!(),
+            };
+
             {
                 let mut parameters = Vec::new();
 
@@ -137,20 +173,6 @@ where
                 }
 
                 operation = operation.parameters(Some(parameters));
-            }
-
-            // `()` is special and means there is no request body.
-            if TypeId::of::<<T::Command as RpcCommand>::Input>() != TypeId::of::<()>() {
-                operation = operation.request_body(Some(
-                    RequestBodyBuilder::new()
-                        .content(
-                            "application/json",
-                            Content::new(Ref::from_schema_name(
-                                <T::Command as RpcCommand>::Input::schema().0,
-                            )),
-                        )
-                        .build(),
-                ));
             }
 
             operation = operation.responses(
@@ -325,25 +347,35 @@ impl CommanderServerExt for App {
 
             let (command_name, command_schema) = C::schema();
 
-            let (command_title, command_description) = match command_schema {
+            let (command_title, command_description) = match &command_schema {
                 RefOr::Ref(_) => panic!("command schema must be inline"),
 
-                RefOr::T(Schema::Object(command_schema)) => {
-                    (command_schema.title, command_schema.description)
-                }
+                RefOr::T(Schema::Object(command_schema)) => (
+                    command_schema.title.clone(),
+                    command_schema.description.clone(),
+                ),
 
                 RefOr::T(_) => panic!("command schema must be an object"),
             };
 
-            // `()` is special and means there is no request body.
-            let input = if TypeId::of::<C::Input>() != TypeId::of::<()>() {
-                let (input_name, input_schema) = C::Input::schema();
+            let input = match command_schema {
+                RefOr::Ref(_) => unreachable!(),
 
-                schema.components = schema.components.schema(input_name, input_schema);
+                RefOr::T(Schema::Object(ref command_schema))
+                    if command_schema.schema_type == SchemaType::Value
+                        && command_schema.default == Some(serde_json::Value::Null) =>
+                {
+                    // This command has no input
+                    None
+                }
 
-                Some(Ref::from_schema_name(input_name))
-            } else {
-                None
+                RefOr::T(Schema::Object(command_schema)) => {
+                    schema.components = schema.components.schema(command_name, command_schema);
+
+                    Some(Ref::from_schema_name(command_name))
+                }
+
+                RefOr::T(_) => unreachable!(),
             };
 
             // Extract the schemas from the responses so we can build the Command schema later

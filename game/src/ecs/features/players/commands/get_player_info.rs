@@ -10,19 +10,15 @@ use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
 /// Get information about a player.
-pub struct GetPlayerInfoCommand;
+pub struct GetPlayerInfoCommand {
+    uuid: String,
+}
 
 #[axum::async_trait]
 impl RpcCommand for GetPlayerInfoCommand {
     const NAME: &'static str = "get_player_info";
 
-    type Input = GetPlayerInfoInput;
     type Output = GetServerInfoResult;
-}
-
-#[derive(Deserialize, ToSchema)]
-pub struct GetPlayerInfoInput {
-    uuid: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -55,7 +51,7 @@ pub async fn route_get_player_info(
 ) -> GetServerInfoResult {
     // TODO: check jwt token
 
-    rpc.call(GetPlayerInfoInput { uuid }).await.into()
+    rpc.call(GetPlayerInfoCommand { uuid }).await.into()
 }
 
 pub fn on_player_info_command(rpc: Rpc<GetPlayerInfoCommand>, connections: Res<SocketConnections>) {

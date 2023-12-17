@@ -12,7 +12,7 @@ use tokio::{
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tungstenite::{client::IntoClientRequest, http::Uri, Message};
 
-use crate::{command::RpcCommand, models::ApiError};
+use crate::{commands::RpcCommand, models::ApiError};
 
 use self::{
     event::SocketEventMessage,

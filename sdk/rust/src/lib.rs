@@ -1,4 +1,4 @@
-pub mod command;
+pub mod commands;
 pub mod event;
 pub mod models;
 pub mod websocket;
@@ -7,7 +7,10 @@ pub mod websocket;
 mod tests {
     use tungstenite::http::Uri;
 
-    use crate::{models::GetServerInfoCommand, websocket::WebsocketSdk};
+    use crate::{
+        models::{GetPlayerInfoCommand, GetServerInfoCommand},
+        websocket::WebsocketSdk,
+    };
 
     #[tokio::test]
     async fn it_works() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,6 +19,14 @@ mod tests {
         let response = sdk.execute(GetServerInfoCommand).await?;
 
         assert_ne!(response.connected_clients, 0);
+
+        let response = sdk
+            .execute(GetPlayerInfoCommand {
+                uuid: "test".to_string(),
+            })
+            .await?;
+
+        println!("{:#?}", response.name);
 
         Ok(())
     }

@@ -9,7 +9,7 @@ where
     C: RpcCommand,
 {
     #[deref]
-    pub(super) input: C::Input,
+    pub(super) input: C,
 
     pub(super) reply_tx: oneshot::Sender<C::Output>,
 }
