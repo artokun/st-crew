@@ -3,10 +3,10 @@ use std::{borrow::Cow, sync::Arc};
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        WebSocketUpgrade,
+        Query, WebSocketUpgrade,
     },
     http::StatusCode,
-    response::Response,
+    response::{IntoResponse, Response},
     Extension,
 };
 use bevy::{log, tasks::block_on};
@@ -14,7 +14,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use serde::de::IgnoredAny;
+use serde::{de::IgnoredAny, Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -33,11 +33,38 @@ mod state;
 pub use schema::*;
 pub use state::*;
 
+#[derive(Deserialize)]
+pub(crate) struct WebsocketParams {
+    format: Option<WebsocketDataFormat>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum WebsocketDataFormat {
+    Json,
+    MsgPack,
+    #[serde(rename = "msgpack_unnamed")]
+    MsgPackUnnamed,
+    Form,
+}
+
 pub(crate) async fn ws_handler(
     ws: WebSocketUpgrade,
-    data_format: DataFormat,
+    query: Query<WebsocketParams>,
+    data_format: Option<DataFormat>,
     Extension(state): Extension<CommanderState>,
 ) -> Response {
+    let query_format = query.format.map(|format| match format {
+        WebsocketDataFormat::Json => DataFormat::Json,
+        WebsocketDataFormat::MsgPack => DataFormat::MsgPack { named: true },
+        WebsocketDataFormat::MsgPackUnnamed => DataFormat::MsgPack { named: false },
+        WebsocketDataFormat::Form => DataFormat::Form,
+    });
+
+    let Some(data_format) = query_format.or(data_format) else {
+        return (StatusCode::NOT_ACCEPTABLE).into_response();
+    };
+
     ws.on_upgrade(move |socket| handle_socket(socket, state.into_inner(), data_format))
 }
 
