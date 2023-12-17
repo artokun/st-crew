@@ -71,6 +71,15 @@ impl DataFormat {
                     DataFormat::MsgPack { named }
                 }
 
+                "application/cbor" => {
+                    let packed = mime
+                        .get_param("packed")
+                        .and_then(|quality| quality.as_str().parse::<bool>().ok())
+                        .unwrap_or(true);
+
+                    DataFormat::Cbor { packed }
+                }
+
                 "application/x-www-form-urlencoded" => DataFormat::Form,
                 _ => continue,
             };
