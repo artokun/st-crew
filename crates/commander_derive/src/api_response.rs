@@ -316,6 +316,8 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                 }
             };
 
+            let error_name = variant_ident.to_string();
+
             // We want errors to be homogonous, so we don't want to add a component for every
             // possible error type. Instead we add a single component for ApiError and then
             // serialize all errors as ApiError.
@@ -328,6 +330,7 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                             "application/json",
                             utoipa::openapi::Content::new(utoipa::openapi::schema::Schema::from(
                                 utoipa::openapi::AllOfBuilder::new()
+                                    .title(Some(#error_name))
                                     .item(utoipa::openapi::Ref::from_schema_name("ApiError"))
                                     .item(
                                         utoipa::openapi::ObjectBuilder::new()

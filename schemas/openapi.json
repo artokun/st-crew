@@ -58,7 +58,8 @@
                         }
                       }
                     }
-                  ]
+                  ],
+                  "title": "Unhandled"
                 }
               }
             }
@@ -109,7 +110,8 @@
                         }
                       }
                     }
-                  ]
+                  ],
+                  "title": "Unhandled"
                 }
               }
             }
@@ -217,7 +219,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "title": "Unhandled"
           }
         ],
         "description": "Get information about a player."
@@ -263,7 +266,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "title": "Unhandled"
           }
         ]
       },
