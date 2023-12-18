@@ -12,7 +12,7 @@ func _ready():
 	pass
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 "
 
@@ -29,5 +29,11 @@ autoconnect_mode = 1
 
 [node name="Router" type="Node" parent="."]
 script = ExtResource("2_iwqda")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
 
 [connection signal="received" from="WebSocket" to="Router" method="_on_web_socket_received"]

@@ -2,27 +2,28 @@ extends Node
 
 class ServerInfoPayload:
 	var connectedClients: int
+signal server_info_payload(payload: ServerInfoPayload)
 
 class EnergyPayload:
 	var current: int
 	var capacity: int
-
-class ServerMessage:
-	var event: String
-	var payload: Dictionary
-	
+signal energy_payload(payload: EnergyPayload)
 
 func _on_web_socket_received(buf: PackedByteArray):
-	var json_dict: Dictionary = JSON.parse_string(buf.get_string_from_utf8())
-	var message: ServerMessage = JsonNode.json_to_class(json_dict, ServerMessage.new())
+	var message = Message.new(buf)
 	
+	if message == null:
+		return
+
 	match message.event:
 		"server_info":
-			var payload: ServerInfoPayload = JsonNode.json_to_class(message.payload, ServerInfoPayload.new())
+			var payload = message.payload(ServerInfoPayload) as ServerInfoPayload
 			print("CLIENTS: ", payload.connectedClients)
+			server_info_payload.emit(payload)
 		"energy_changed":
-			var payload: EnergyPayload = JsonNode.json_to_class(message.payload, EnergyPayload.new())
+			var payload = message.payload(EnergyPayload) as EnergyPayload
 			print("ENERGY: %d/%d" % [payload.current, payload.capacity])
+			energy_payload.emit(payload)
 		_:
 			printerr("Uncaught Event: %s" % message.event)
-			printerr(json_dict)
+			printerr(message.event, message.payload)
