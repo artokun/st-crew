@@ -1,0 +1,33 @@
+[gd_scene load_steps=4 format=3 uid="uid://cq812dnwdhe4a"]
+
+[ext_resource type="Script" path="res://addons/websocket/WebSocket.gd" id="1_m4l6d"]
+[ext_resource type="Script" path="res://Router.gd" id="2_iwqda"]
+
+[sub_resource type="GDScript" id="GDScript_8q66t"]
+script/source = "extends Node
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	pass
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	pass
+"
+
+[node name="World" type="Node"]
+script = SubResource("GDScript_8q66t")
+
+[node name="WebSocket" type="Node" parent="."]
+script = ExtResource("1_m4l6d")
+receive_limit = 1
+host = "127.0.0.1:8081"
+route = "/ws?format=json"
+use_WSS = false
+autoconnect_mode = 1
+
+[node name="Router" type="Node" parent="."]
+script = ExtResource("2_iwqda")
+
+[connection signal="received" from="WebSocket" to="Router" method="_on_web_socket_received"]

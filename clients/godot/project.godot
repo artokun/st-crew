@@ -11,9 +11,12 @@ config_version=5
 [application]
 
 config/name="godot"
-run/main_scene="res://client.tscn"
+run/main_scene="res://world.tscn"
 config/features=PackedStringArray("4.2", "GL Compatibility")
-config/icon="res://icon.svg"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/websocket/plugin.cfg")
 
 [rendering]
 

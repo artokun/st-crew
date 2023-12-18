@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://de1uoow7u48dh"
-path="res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex"
+uid="uid://cjt3yalvovcmg"
+path="res://.godot/imported/WebSocket.svg-3a7096c573ee8df0deb8367b3b813405.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://icon.svg"
-dest_files=["res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex"]
+source_file="res://addons/websocket/WebSocket.svg"
+dest_files=["res://.godot/imported/WebSocket.svg-3a7096c573ee8df0deb8367b3b813405.ctex"]
 
 [params]
 
