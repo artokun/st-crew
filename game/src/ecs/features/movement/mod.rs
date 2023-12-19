@@ -8,6 +8,7 @@ mod params;
 mod socket_events;
 mod systems;
 
+use components::Immobile;
 pub use components::{Destination, Speed};
 pub use models::ImmobileReason;
 pub use params::ImmobilityMut;
