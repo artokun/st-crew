@@ -9,12 +9,16 @@ use bevy::{
 };
 use st_commander::{connection::ConnectionId, event::SocketConnectionEvent};
 
-use crate::ecs::features::players::{ConnectedPlayers, Player};
+use crate::ecs::features::{
+    common::UniqueId,
+    players::{ConnectedPlayers, Player},
+};
 
 #[derive(Bundle)]
 struct PlayerBundle {
     connection_id: ConnectionId,
     player: Player,
+    uuid: UniqueId,
     name: Name,
 }
 
@@ -26,14 +30,15 @@ pub fn update_connected_players(
     for event in event_reader.read() {
         match event {
             SocketConnectionEvent::Connected { connection } => {
-                let player = Player::new_random();
+                let uuid = UniqueId::new_random();
 
-                let name = Name::new(format!("player-{}", &player.to_string()[..8]));
+                let name = Name::new(format!("player-{}", &uuid.to_string()[..8]));
 
                 // If the player entity exists before they connect, find the entity and attach them here
                 let entity = commands.spawn(PlayerBundle {
                     connection_id: connection.id,
-                    player,
+                    player: Player,
+                    uuid,
                     name,
                 });
 

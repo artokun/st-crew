@@ -11,6 +11,7 @@ use self::{
     server::ServerPlugin,
 };
 
+pub mod common;
 pub mod droids;
 pub mod energy;
 pub mod movement;

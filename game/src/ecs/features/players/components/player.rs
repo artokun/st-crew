@@ -1,10 +1,4 @@
-use bevy::{prelude::*, utils::Uuid};
+use bevy::prelude::*;
 
-#[derive(Component, Deref)]
-pub struct Player(Uuid);
-
-impl Player {
-    pub(crate) fn new_random() -> Player {
-        Player(Uuid::new_v4())
-    }
-}
+#[derive(Component)]
+pub struct Player;

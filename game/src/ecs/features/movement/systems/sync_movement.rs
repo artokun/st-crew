@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use st_commander::connections::SocketConnections;
 
 use super::super::components::Immobile;
-use crate::ecs::features::droids::components::Droid;
+use crate::ecs::features::common::UniqueId;
 use crate::ecs::features::movement::socket_events::PositionWithEta;
 use crate::ecs::features::movement::{
     components::{Destination, Speed},
@@ -11,7 +11,7 @@ use crate::ecs::features::movement::{
 
 pub fn sync_entity_movement(
     mut query: Query<
-        (&Droid, &Speed, &Destination, &Transform),
+        (&UniqueId, &Speed, &Destination, &Transform),
         (With<Destination>, Without<Immobile>),
     >,
     time: Res<Time>,
@@ -24,7 +24,7 @@ pub fn sync_entity_movement(
 
     let mut droid_positions = Vec::new();
 
-    for (droid, speed, destination, transform) in query.iter_mut() {
+    for (uuid, speed, destination, transform) in query.iter_mut() {
         let distance = (destination.x - transform.translation.x)
             .hypot(destination.y - transform.translation.y);
         let time_to_arrival = distance / speed.0;
@@ -32,7 +32,7 @@ pub fn sync_entity_movement(
         let destination_time = server_time + time_to_arrival;
 
         let position = PositionWithEta {
-            uuid: droid.0.to_string(),
+            uuid: uuid.0.to_string(),
             origin: (transform.translation.x, transform.translation.y),
             destination: (destination.x, destination.y),
             time_to_arrival,
