@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-mod components;
+pub mod components;
 mod systems;
 
 pub use systems::spawn_loaner_droids;

@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::Uuid};
 
 #[derive(Component, Deref)]
-pub struct Droid(Uuid);
+pub struct Droid(pub Uuid);
 
 impl Droid {
     pub(crate) fn new_random() -> Droid {

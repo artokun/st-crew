@@ -20,8 +20,13 @@ pub fn spawn_loaner_droids(mut commands: Commands) {
             Droid::new_random(),
             Name::new(format!("Loaner Droid {}", i + 1)),
             Speed(1.0),
-            Transform::IDENTITY,
-            Destination(Vec3::new(x.to_owned(), y.to_owned(), 0.0)),
+            // Random destination between -10 and 10 on both axes
+            Transform::from_translation(Vec3::new(
+                rand::random::<f32>() * 20.0 - 10.0,
+                rand::random::<f32>() * 20.0 - 10.0,
+                0.0,
+            )),
+            Destination(Vec3::new(*x, *y, 0.0)),
         ));
 
         log::info!("Spawned loaner droid {} at ({}, {})", i + 1, x, y);
