@@ -17,11 +17,6 @@ pub fn sync_entity_movement(
     time: Res<Time>,
     connections: Res<SocketConnections>,
 ) {
-    // update only once per second
-    if time.elapsed_seconds() % 1.0 > time.delta_seconds() {
-        return;
-    }
-
     let mut droid_positions = Vec::new();
 
     for (uuid, speed, destination, transform) in query.iter_mut() {
