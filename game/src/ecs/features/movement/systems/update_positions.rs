@@ -1,10 +1,13 @@
 use bevy::{log, prelude::*};
 
-use crate::ecs::features::movement::components::{Destination, Speed};
+use crate::ecs::features::movement::components::{Destination, Immobile, Speed};
 
 pub fn update_positions(
     mut commands: Commands,
-    mut query: Query<(Entity, &Name, &Speed, &Destination, &mut Transform), With<Destination>>,
+    mut query: Query<
+        (Entity, &Name, &Speed, &Destination, &mut Transform),
+        (With<Destination>, Without<Immobile>),
+    >,
     time: Res<Time>,
 ) {
     for (entity, name, speed, destination, mut transform) in query.iter_mut() {
