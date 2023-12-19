@@ -21,11 +21,6 @@ impl RpcCommand for GetPlayerInfoCommand {
     type Output = GetServerInfoResult;
 }
 
-#[derive(Serialize, ToSchema)]
-pub struct PlayerInfo {
-    pub name: String,
-}
-
 #[derive(ApiResponse)]
 pub enum GetServerInfoResult {
     /// Success
@@ -33,7 +28,23 @@ pub enum GetServerInfoResult {
     Ok(#[from] PlayerInfo),
 
     #[response(transparent)]
+    NotFound(#[from] PlayerNotFoundError),
+
+    #[response(transparent)]
     CallError(#[from] CallError),
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PlayerInfo {
+    pub name: String,
+}
+
+#[derive(Debug, thiserror::Error, ToSchema, ApiResponse)]
+/// The given player was not found.
+#[response(status = NOT_FOUND)]
+#[error("player not found")]
+pub struct PlayerNotFoundError {
+    pub uuid: String,
 }
 
 #[derive(TypedPath, Deserialize, ToSchema)]

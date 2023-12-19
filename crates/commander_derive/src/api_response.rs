@@ -1,6 +1,5 @@
 use darling::{
     ast::{self, Style},
-    util::Ignored,
     FromDeriveInput, FromField, FromMeta, FromVariant,
 };
 use proc_macro2::TokenStream as TokenStream2;
@@ -13,10 +12,23 @@ use to_snake_case::ToSnakeCase;
 use crate::utils::resolve_package_path;
 
 #[derive(FromDeriveInput)]
-#[darling(supports(enum_any))]
+#[darling(
+    attributes(response),
+    supports(struct_named, enum_any),
+    forward_attrs(error, doc)
+)]
 struct ApiResponseOps {
     ident: syn::Ident,
-    data: ast::Data<ApiResponseVariant, Ignored>,
+
+    #[darling(default)]
+    error: Option<ErrorOptions>,
+
+    status: Option<syn::Path>,
+
+    data: ast::Data<ApiResponseVariant, VariantField>,
+
+    #[darling(default)]
+    attrs: Vec<syn::Attribute>,
 }
 
 #[derive(Debug, FromVariant)]
@@ -40,12 +52,18 @@ pub struct ApiResponseVariant {
 
     #[darling(default)]
     attrs: Vec<syn::Attribute>,
+
+    #[darling(default)]
+    is_struct: bool,
 }
 
 #[derive(Debug, FromMeta)]
-struct ErrorOptions {
-    name: Option<String>,
-    message: Option<String>,
+enum ErrorOptions {
+    Message(String),
+    Expanded {
+        name: Option<String>,
+        message: Option<String>,
+    },
 }
 
 #[derive(Debug, FromField)]
@@ -78,7 +96,22 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
 
     let mut errors = Vec::<TokenStream2>::new();
 
-    let variants = ops.data.take_enum().unwrap();
+    let variants = match ops.data {
+        ast::Data::Enum(enum_data) => enum_data,
+
+        ast::Data::Struct(fields) => {
+            vec![ApiResponseVariant {
+                ident: ident.clone(),
+                error: ops.error,
+                status: ops.status,
+                transparent: false,
+                fields,
+                attrs: ops.attrs,
+
+                is_struct: true,
+            }]
+        }
+    };
 
     for ApiResponseVariant {
         ident: variant_ident,
@@ -140,8 +173,15 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
         fields: variant_fields,
         error: variant_error,
         attrs: variant_attrs,
+        is_struct,
     } in &variants
     {
+        let variant_self: TokenStream2 = if *is_struct {
+            parse_quote!(Self)
+        } else {
+            parse_quote!(Self::#variant_ident)
+        };
+
         let thiserror_attr = variant_attrs
             .iter()
             .find(|attr| attr.path().is_ident("error"));
@@ -170,11 +210,11 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                     ));
 
                     status_code_match.push(parse_quote! {
-                        Self::#variant_ident(ref __field0) => #st_commander::response::ApiResponse::status(__field0)
+                        #variant_self(ref __field0) => #st_commander::response::ApiResponse::status(__field0)
                     });
 
                     serialize_variants.push(parse_quote! {
-                        Self::#variant_ident(ref __field0) => {
+                        #variant_self(ref __field0) => {
                             _serde::Serialize::serialize(__field0, __serializer)
                         }
                     });
@@ -244,15 +284,15 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
 
         match variant_fields.style {
             Style::Unit => status_code_match.push(parse_quote! {
-                Self::#variant_ident => #status
+                #variant_self => #status
             }),
 
             Style::Tuple => status_code_match.push(parse_quote! {
-                Self::#variant_ident(..) => #status
+                #variant_self(..) => #status
             }),
 
             Style::Struct => status_code_match.push(parse_quote! {
-                Self::#variant_ident { .. } => #status
+                #variant_self { .. } => #status
             }),
         }
 
@@ -283,12 +323,18 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
             // Either grab the defined error name, or use the varint name in `snake_case`.
             let err_name = variant_error
                 .as_ref()
-                .and_then(|opts| opts.name.clone())
+                .and_then(|opts| match opts {
+                    ErrorOptions::Message(_) => None,
+                    ErrorOptions::Expanded { name, .. } => name.clone(),
+                })
                 .unwrap_or_else(|| variant_ident.to_string().to_snake_case());
 
             // The message is either the message field of the `error` attribute or the message
             // from thiserror's `#[error]` attribute if it exists.
-            let err_message = match variant_error.as_ref().and_then(|opts| opts.message.clone()) {
+            let err_message = match variant_error.as_ref().and_then(|opts| match opts {
+                ErrorOptions::Message(message) => Some(message.clone()),
+                ErrorOptions::Expanded { message, .. } => message.clone(),
+            }) {
                 Some(message) => message,
                 None => {
                     match thiserror_attr
@@ -317,6 +363,18 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
             };
 
             let error_name = variant_ident.to_string();
+
+            let err_context: Option<TokenStream2> = if *is_struct {
+                Some(parse_quote!(
+                    .property(
+                        "context",
+                        Self::schema().1,
+                    )
+                    .required("context")
+                ))
+            } else {
+                None
+            };
 
             // We want errors to be homogonous, so we don't want to add a component for every
             // possible error type. Instead we add a single component for ApiError and then
@@ -348,6 +406,7 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                                                     .example(Some(serde_json::json!(#err_message))),
                                             )
                                             .required("message")
+                                            #err_context
                                             .build()
                                     ),
                             )),
@@ -359,35 +418,48 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
             match variant_fields.style {
                 Style::Unit => {
                     serialize_variants.push(parse_quote! {
-                        err @ Self::#variant_ident => {
-                            _serde::Serialize::serialize(&#st_commander::response::ApiError::new(#status).with_name(#err_name).with_error(err), __serializer)
+                        err @ #variant_self => {
+                            _serde::Serialize::serialize(
+                                &#st_commander::response::ApiError::new(#status)
+                                    .with_name(#err_name)
+                                    .with_error(err),
+                                __serializer
+                            )
                         }
                     });
                 }
 
                 Style::Tuple => {
                     serialize_variants.push(parse_quote! {
-                        err @ Self::#variant_ident(..) => {
-                            _serde::Serialize::serialize(&#st_commander::response::ApiError::new(#status).with_name(#err_name).with_error(err), __serializer)
+                        err @ #variant_self(..) => {
+                            _serde::Serialize::serialize(
+                                &#st_commander::response::ApiError::new(#status)
+                                    .with_name(#err_name)
+                                    .with_error(err),
+                                __serializer
+                            )
                         }
                     });
                 }
 
                 Style::Struct => {
-                    errors.push(
-                        syn::Error::new_spanned(
-                            variant_ident,
-                            "expected unit variant with no fields",
-                        )
-                        .to_compile_error(),
-                    );
+                    serialize_variants.push(parse_quote! {
+                        err @ #variant_self { .. } => {
+                            _serde::Serialize::serialize(
+                                &#st_commander::response::ApiError::new(#status)
+                                    .with_name(#err_name)
+                                    .with_message(#err_message),
+                                __serializer
+                            )
+                        }
+                    });
                 }
             }
         } else {
             match variant_fields.style {
                 Style::Unit | Style::Tuple if variant_fields.fields.is_empty() => {
                     serialize_variants.push(parse_quote! {
-                        Self::#variant_ident => {
+                        #variant_self => {
                             _serde::Serialize::serialize(&(), __serializer)
                         }
                     });
@@ -422,7 +494,7 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                     ));
 
                     serialize_variants.push(parse_quote! {
-                        Self::#variant_ident(ref __field0) => {
+                        #variant_self(ref __field0) => {
                             _serde::Serialize::serialize(__field0, __serializer)
                         }
                     });

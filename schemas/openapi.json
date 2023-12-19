@@ -32,6 +32,51 @@
               }
             }
           },
+          "404": {
+            "description": "The given player was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "error",
+                        "message",
+                        "context"
+                      ],
+                      "properties": {
+                        "context": {
+                          "type": "object",
+                          "description": "The given player was not found.",
+                          "required": [
+                            "uuid"
+                          ],
+                          "properties": {
+                            "uuid": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "error": {
+                          "type": "string",
+                          "example": "player_not_found_error"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "player not found"
+                        }
+                      }
+                    }
+                  ],
+                  "title": "PlayerNotFoundError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "The command was not handled by any system.",
             "content": {
@@ -196,6 +241,44 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/PlayerInfo"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "error",
+                  "message",
+                  "context"
+                ],
+                "properties": {
+                  "context": {
+                    "type": "object",
+                    "description": "The given player was not found.",
+                    "required": [
+                      "uuid"
+                    ],
+                    "properties": {
+                      "uuid": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "error": {
+                    "type": "string",
+                    "example": "player_not_found_error"
+                  },
+                  "message": {
+                    "type": "string",
+                    "example": "player not found"
+                  }
+                }
+              }
+            ],
+            "title": "PlayerNotFoundError"
           },
           {
             "allOf": [

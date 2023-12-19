@@ -6,7 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use bevy::log;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::task::JoinError;
 use utoipa::ToSchema;
 
@@ -63,15 +63,16 @@ impl ApiErrorBuilder<true> {
 
             message: message.into(),
 
-            headers: None,
+            context: (),
 
+            headers: None,
             backtrace: None,
         }
     }
 }
 
-#[derive(Debug, ToSchema, Serialize, Deserialize)]
-pub struct ApiError {
+#[derive(ToSchema, Serialize)]
+pub struct ApiError<Context = ()> {
     #[serde(skip)]
     pub status: StatusCode,
 
@@ -82,10 +83,26 @@ pub struct ApiError {
     pub message: Arc<str>,
 
     #[serde(skip)]
+    pub context: Context,
+
+    #[serde(skip)]
     headers: Option<HeaderMap<HeaderValue>>,
 
     #[serde(skip)]
     backtrace: Option<Backtrace>,
+}
+
+impl std::fmt::Debug for ApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ApiError")
+            .field("status", &self.status)
+            .field("error", &self.error)
+            .field("message", &self.message)
+            .field("context", &serde_json::to_string(&self.context).ok())
+            .field("headers", &self.headers)
+            .field("backtrace", &self.backtrace)
+            .finish()
+    }
 }
 
 impl ApiError {
@@ -162,13 +179,32 @@ impl ApiError {
             error: self.error,
             message: self.message,
 
+            context: self.context,
+
             headers: self.headers,
+
             backtrace: Some(Backtrace::capture()),
         }
     }
 }
 
 impl ApiError {
+    #[must_use]
+    pub fn with_context<C>(self, context: C) -> ApiError<C> {
+        ApiError::<C> {
+            status: self.status,
+
+            error: self.error,
+            message: self.message,
+
+            context,
+
+            headers: self.headers,
+
+            backtrace: self.backtrace,
+        }
+    }
+
     #[must_use]
     pub fn with_headers<I: IntoIterator<Item = (Option<HeaderName>, HeaderValue)>>(
         mut self,
@@ -192,6 +228,14 @@ impl std::error::Error for ApiError {}
 
 impl IntoResponse for ApiError {
     fn into_response(mut self) -> Response {
+        #[derive(Serialize)]
+        pub struct ApiErrorResponse<Context = ()> {
+            pub error: Cow<'static, str>,
+            pub message: Arc<str>,
+
+            pub context: Context,
+        }
+
         assert!(
             self.status.is_client_error() || self.status.is_server_error(),
             "expected api error status"
@@ -207,7 +251,16 @@ impl IntoResponse for ApiError {
 
         let headers = self.headers.take().unwrap_or_default();
 
-        let mut response = (self.status, EncodeBody(self)).into_response();
+        let mut response = (
+            self.status,
+            EncodeBody(ApiErrorResponse {
+                error: self.error,
+                message: self.message,
+
+                context: self.context,
+            }),
+        )
+            .into_response();
 
         response.headers_mut().extend(headers);
 
