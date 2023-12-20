@@ -8,9 +8,8 @@ pub struct PositionWithEta {
     pub uuid: String,
     pub origin: (f32, f32),
     pub destination: (f32, f32),
-    pub time_to_arrival: f32,
-    pub server_time: f32,
-    pub destination_time: f32,
+    pub current_tick: u64,
+    pub arrival_tick: u64,
 }
 
 #[derive(Debug, Serialize, ToSchema, Clone)]

@@ -20,7 +20,7 @@ impl Default for DroidBundle {
             droid: Droid,
             uuid: UniqueId::new_random(),
             name: Name::new("Droid".to_string()),
-            speed: Speed(1.0),
+            speed: Speed(0.25),
             position: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         }
     }
