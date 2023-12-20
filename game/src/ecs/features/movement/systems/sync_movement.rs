@@ -1,11 +1,14 @@
 use bevy::prelude::*;
 use st_commander::connections::SocketConnections;
 
-use crate::ecs::features::movement::socket_events::{MovementChangedSocketEvent, PositionWithEta};
+use crate::ecs::features::movement::{
+    components::Immobile,
+    socket_events::{MovementChangedSocketEvent, PositionWithEta},
+};
 use crate::ecs::features::tick::Ticks;
 use crate::ecs::features::{
     common::UniqueId,
-    movement::{Destination, Immobile, Speed},
+    movement::{Destination, Speed},
 };
 
 pub fn sync_entity_movement(
@@ -22,7 +25,7 @@ pub fn sync_entity_movement(
         let distance = (destination.x - transform.translation.x)
             .hypot(destination.y - transform.translation.y);
         let remaining_ticks = (distance / speed.0).ceil() as u32;
-        let current_tick = tick.0;
+        let current_tick = tick.current_tick();
         let arrival_tick = current_tick + remaining_ticks as u64;
 
         let position = PositionWithEta {
