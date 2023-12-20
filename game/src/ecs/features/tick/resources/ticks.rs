@@ -75,11 +75,11 @@ impl Ticks {
         self.tick_timer.tick(delta);
 
         if !self.tick_timer.just_finished() {
-            return false;
+            false
+        } else {
+            self.current_tick += 1;
+
+            true
         }
-
-        self.current_tick += 1;
-
-        return true;
     }
 }

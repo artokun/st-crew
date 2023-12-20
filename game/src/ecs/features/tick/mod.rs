@@ -1,9 +1,4 @@
-use std::time::Duration;
-
-use bevy::{
-    app::MainScheduleOrder, ecs::schedule::ExecutorKind, prelude::*,
-    time::common_conditions::on_timer,
-};
+use bevy::{app::MainScheduleOrder, ecs::schedule::ExecutorKind, prelude::*};
 
 use crate::ecs::features::tick::schedule::{TickMain, TickMainScheduleOrder};
 
@@ -12,7 +7,6 @@ mod resources;
 mod schedule;
 
 pub use resources::*;
-
 pub use schedule::{TickFirst, TickLast, TickPostUpdate, TickPreUpdate, TickUpdate};
 
 pub struct TickPlugin;
