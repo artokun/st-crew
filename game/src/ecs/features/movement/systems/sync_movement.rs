@@ -1,8 +1,8 @@
-use bevy::{log, prelude::*};
+use bevy::prelude::*;
 use st_commander::connections::SocketConnections;
 
 use crate::ecs::features::movement::socket_events::{MovementChangedSocketEvent, PositionWithEta};
-use crate::ecs::features::movement::Ticks;
+use crate::ecs::features::tick::Ticks;
 use crate::ecs::features::{
     common::UniqueId,
     movement::{Destination, Immobile, Speed},

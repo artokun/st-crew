@@ -8,7 +8,7 @@ use utoipa::openapi::security::{
 
 use self::{
     droids::DroidsPlugin, energy::EnergyPlugin, movement::MovementPlugin, players::PlayersPlugin,
-    server::ServerPlugin,
+    server::ServerPlugin, tick::TickPlugin,
 };
 
 pub mod common;
@@ -17,6 +17,7 @@ pub mod energy;
 pub mod movement;
 pub mod players;
 pub mod server;
+pub mod tick;
 
 pub struct FeaturesPlugin;
 
@@ -66,6 +67,7 @@ impl Plugin for FeaturesPlugin {
             schema
         })
         .add_plugins(ServerPlugin)
+        .add_plugins(TickPlugin)
         .add_plugins(EnergyPlugin)
         .add_plugins(PlayersPlugin)
         .add_plugins(DroidsPlugin)
