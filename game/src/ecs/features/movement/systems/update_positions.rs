@@ -19,7 +19,7 @@ pub fn update_positions(
         )
         .normalize();
 
-        transform.translation += direction * speed.0;
+        transform.translation += direction * *speed;
 
         // log::info!(
         //     "Moving {} from ({}, {}) to ({}, {})",
@@ -30,8 +30,8 @@ pub fn update_positions(
         //     destination.y
         // );
 
-        if (transform.translation.x - destination.x).abs() <= speed.0
-            && (transform.translation.y - destination.y).abs() <= speed.0
+        if (transform.translation.x - destination.x).abs() <= *speed
+            && (transform.translation.y - destination.y).abs() <= *speed
         {
             transform.translation = destination.0;
             commands.entity(entity).remove::<Destination>();

@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::ecs::features::tick::Ticks;
+use crate::ecs::features::tick::TickTimer;
 
 /// Runs first in the [`TickMain`] schedule.
 ///
@@ -100,7 +100,7 @@ impl TickMain {
     /// A system that runs the tick timestep's "main schedule"
     pub fn run_tick_main(world: &mut World) {
         let delta = world.resource::<Time<Virtual>>().delta();
-        let mut ticks = world.resource_mut::<Ticks>();
+        let mut ticks = world.resource_mut::<TickTimer>();
 
         if !ticks.tick(delta) {
             return;

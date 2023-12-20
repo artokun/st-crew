@@ -1,11 +1,11 @@
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 use st_commander::connections::SocketConnections;
 
 use crate::ecs::features::movement::{
-    components::Immobile,
+    components::{Distance, Immobile},
     socket_events::{MovementChangedSocketEvent, PositionWithEta},
 };
-use crate::ecs::features::tick::Ticks;
+use crate::ecs::features::tick::TickTimer;
 use crate::ecs::features::{
     common::UniqueId,
     movement::{Destination, Speed},
@@ -16,17 +16,16 @@ pub fn sync_entity_movement(
         (&UniqueId, &Speed, &Destination, &Transform),
         (With<Destination>, Without<Immobile>),
     >,
-    tick: Res<Ticks>,
+    tick: Res<TickTimer>,
     connections: Res<SocketConnections>,
 ) {
     let mut droid_positions = Vec::new();
 
     for (uuid, speed, destination, transform) in query.iter() {
-        let distance = (destination.x - transform.translation.x)
-            .hypot(destination.y - transform.translation.y);
-        let remaining_ticks = (distance / speed.0).ceil() as u32;
+        let distance = Distance::between_positions(transform.translation, destination.0);
+        let remaining_ticks = distance / *speed;
         let current_tick = tick.current_tick();
-        let arrival_tick = current_tick + remaining_ticks as u64;
+        let arrival_tick = current_tick + remaining_ticks;
 
         let position = PositionWithEta {
             uuid: uuid.0.to_string(),

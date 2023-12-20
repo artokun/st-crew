@@ -6,7 +6,8 @@ mod models;
 mod resources;
 mod schedule;
 
-pub use resources::*;
+pub use models::{Tick, TickDuration};
+pub use resources::TickTimer;
 pub use schedule::{TickFirst, TickLast, TickPostUpdate, TickPreUpdate, TickUpdate};
 
 pub struct TickPlugin;
@@ -23,7 +24,7 @@ impl Plugin for TickPlugin {
 
         app.add_schedule(tick_main_schedule)
             .init_resource::<TickMainScheduleOrder>()
-            .insert_resource(Ticks::from_hz(TICKS_PER_SECOND))
+            .insert_resource(TickTimer::from_hz(TICKS_PER_SECOND))
             .add_systems(TickMain, TickMain::run_tick_main);
 
         // An upcoming bevy update may add a way to persist events until certain schedules,
