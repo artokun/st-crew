@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ecs::features::{movement::Speed, tick::TickDuration};
 
-#[derive(Component, Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Distance(f32);
 
 impl Distance {

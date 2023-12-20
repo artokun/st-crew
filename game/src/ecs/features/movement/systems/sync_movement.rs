@@ -2,8 +2,9 @@ use bevy::{log, prelude::*};
 use st_commander::connections::SocketConnections;
 
 use crate::ecs::features::movement::{
-    components::{Distance, Immobile},
+    components::Immobile,
     socket_events::{MovementChangedSocketEvent, PositionWithEta},
+    Distance,
 };
 use crate::ecs::features::tick::TickTimer;
 use crate::ecs::features::{

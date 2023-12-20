@@ -11,7 +11,7 @@ mod socket_events;
 mod systems;
 
 pub use components::{Destination, Speed};
-pub use models::ImmobileReason;
+pub use models::{Distance, ImmobileReason};
 pub use params::ImmobilityMut;
 
 pub struct MovementPlugin;
