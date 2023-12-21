@@ -4,14 +4,22 @@ use crate::ecs::features::movement::components::{Destination, Immobile, Speed};
 
 pub fn update_positions(
     mut commands: Commands,
-    mut query: Query<(Entity, &Name, &Speed, &Destination, &mut Transform), Without<Immobile>>,
-    time: Res<Time>,
+    mut query: Query<
+        (Entity, &Name, &Speed, &Destination, &mut Transform),
+        (With<Destination>, Without<Immobile>),
+    >,
+    // time: Res<Time>,
 ) {
     for (entity, name, speed, destination, mut transform) in query.iter_mut() {
-        transform.translation.x +=
-            (destination.x - transform.translation.x).signum() * speed.0 * time.delta_seconds();
-        transform.translation.y +=
-            (destination.y - transform.translation.y).signum() * speed.0 * time.delta_seconds();
+        // each tick, move towards destination
+        let direction = Vec3::new(
+            destination.x - transform.translation.x,
+            destination.y - transform.translation.y,
+            0.0,
+        )
+        .normalize();
+
+        transform.translation += direction * *speed;
 
         // log::info!(
         //     "Moving {} from ({}, {}) to ({}, {})",
@@ -22,11 +30,10 @@ pub fn update_positions(
         //     destination.y
         // );
 
-        if (transform.translation.x - destination.x).abs() < 0.001
-            && (transform.translation.y - destination.y).abs() < 0.001
+        if (transform.translation.x - destination.x).abs() <= *speed
+            && (transform.translation.y - destination.y).abs() <= *speed
         {
             transform.translation = destination.0;
-
             commands.entity(entity).remove::<Destination>();
 
             log::info!(

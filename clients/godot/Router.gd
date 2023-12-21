@@ -25,4 +25,4 @@ func _on_web_socket_received(buf: PackedByteArray):
 			energy_payload.emit(payload)
 		_:
 			printerr("Uncaught Event: %s" % message.event)
-			printerr(message.event, message.payload)
+			printerr(message.event, buf.get_string_from_utf8())
