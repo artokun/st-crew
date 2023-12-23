@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, utils::Uuid};
 
+use crate::utils::short_type_name;
+
 pub trait UniqueIdType: Send + Sync + 'static {}
 
 #[derive(Component, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -42,8 +44,8 @@ where
     T: UniqueIdType + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("UniqueId<Droid>")
-            .field(&self.inner.to_string())
+        f.debug_tuple(short_type_name::<T>())
+            .field(&self.inner)
             .finish()
     }
 }
