@@ -3,6 +3,7 @@
 use bevy::{log::LogPlugin, prelude::*};
 
 mod ecs;
+mod utils;
 
 use ecs::features::FeaturesPlugin;
 use st_commander::CommanderPlugin;
