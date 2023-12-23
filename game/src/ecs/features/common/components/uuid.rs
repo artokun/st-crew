@@ -8,7 +8,7 @@ pub trait UniqueIdType: Send + Sync + 'static {}
 pub struct UniqueId<T: UniqueIdType> {
     phantom: PhantomData<T>,
 
-    pub(crate) inner: Uuid,
+    inner: Uuid,
 }
 
 impl<T> UniqueId<T>
