@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use crate::ecs::features::common::UniqueIdType;
 
-#[derive(Component)]
 pub struct Player;
+
+impl UniqueIdType for Player {}

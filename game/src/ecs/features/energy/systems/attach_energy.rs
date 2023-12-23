@@ -1,6 +1,7 @@
 use bevy::{log, prelude::*};
 
 use crate::ecs::features::{
+    common::UniqueId,
     energy::{components::EnergyRegeneration, Energy},
     players::Player,
 };
@@ -8,7 +9,7 @@ use crate::ecs::features::{
 pub fn attach_player_energy(
     mut commands: Commands,
     time: Res<Time>,
-    query: Query<Entity, Added<Player>>,
+    query: Query<Entity, Added<UniqueId<Player>>>,
 ) {
     for entity in query.iter() {
         log::info!("attaching energy components to entity: {:?}", entity);

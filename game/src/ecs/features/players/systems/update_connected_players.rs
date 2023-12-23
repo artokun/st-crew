@@ -17,8 +17,8 @@ use crate::ecs::features::{
 #[derive(Bundle)]
 struct PlayerBundle {
     connection_id: ConnectionId,
-    player: Player,
-    uuid: UniqueId,
+
+    id: UniqueId<Player>,
     name: Name,
 }
 
@@ -30,15 +30,15 @@ pub fn update_connected_players(
     for event in event_reader.read() {
         match event {
             SocketConnectionEvent::Connected { connection } => {
-                let uuid = UniqueId::new_random();
+                let id = UniqueId::new_random();
 
-                let name = Name::new(format!("player-{}", &uuid.to_string()[..8]));
+                let name = Name::new(format!("player-{}", &id));
 
                 // If the player entity exists before they connect, find the entity and attach them here
                 let entity = commands.spawn(PlayerBundle {
                     connection_id: connection.id,
-                    player: Player,
-                    uuid,
+
+                    id,
                     name,
                 });
 

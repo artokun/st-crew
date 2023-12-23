@@ -1,14 +1,17 @@
 use bevy::prelude::*;
 
-use crate::ecs::features::{common::UniqueId, movement::Speed};
+use crate::ecs::features::{
+    common::{UniqueId, UniqueIdType},
+    movement::Speed,
+};
 
-#[derive(Component)]
 pub struct Droid;
+
+impl UniqueIdType for Droid {}
 
 #[derive(Bundle)]
 pub struct DroidBundle {
-    pub droid: Droid,
-    pub uuid: UniqueId,
+    pub id: UniqueId<Droid>,
     pub name: Name,
     pub speed: Speed,
     pub position: Transform,
@@ -17,8 +20,7 @@ pub struct DroidBundle {
 impl Default for DroidBundle {
     fn default() -> Self {
         Self {
-            droid: Droid,
-            uuid: UniqueId::new_random(),
+            id: UniqueId::new_random(),
             name: Name::new("Droid".to_string()),
             speed: Speed::per_second(1.0),
             position: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
