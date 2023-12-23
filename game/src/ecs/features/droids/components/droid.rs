@@ -21,7 +21,7 @@ impl Default for DroidBundle {
     fn default() -> Self {
         Self {
             id: UniqueId::new_random(),
-            name: Name::new("Droid".to_string()),
+            name: Name::new("Droid"),
             speed: Speed::per_second(1.0),
             position: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         }
