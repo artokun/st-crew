@@ -41,10 +41,10 @@ where
 
 impl<T> std::fmt::Debug for UniqueId<T>
 where
-    T: UniqueIdType + std::fmt::Debug,
+    T: UniqueIdType,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple(short_type_name::<T>())
+        f.debug_tuple(format!("UniqueId<{}>", short_type_name::<T>()).as_str())
             .field(&self.inner)
             .finish()
     }
