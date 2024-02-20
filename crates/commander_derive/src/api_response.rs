@@ -12,11 +12,7 @@ use to_snake_case::ToSnakeCase;
 use crate::utils::resolve_package_path;
 
 #[derive(FromDeriveInput)]
-#[darling(
-    attributes(response),
-    supports(struct_named, enum_any),
-    forward_attrs(error, doc)
-)]
+#[darling(attributes(response), supports(enum_any), forward_attrs(error, doc))]
 struct ApiResponseOps {
     ident: syn::Ident,
 
@@ -52,22 +48,16 @@ pub struct ApiResponseVariant {
 
     #[darling(default)]
     attrs: Vec<syn::Attribute>,
-
-    #[darling(default)]
-    is_struct: bool,
 }
 
 #[derive(Debug, FromMeta)]
-enum ErrorOptions {
-    Message(String),
-    Expanded {
-        name: Option<String>,
-        message: Option<String>,
-    },
+struct ErrorOptions {
+    name: Option<String>,
+    message: Option<String>,
 }
 
 #[derive(Debug, FromField)]
-#[darling(forward_attrs(from))]
+#[darling(forward_attrs(from, context))]
 struct VariantField {
     #[allow(dead_code)]
     ident: Option<Ident>,
@@ -96,21 +86,12 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
 
     let mut errors = Vec::<TokenStream2>::new();
 
-    let variants = match ops.data {
-        ast::Data::Enum(enum_data) => enum_data,
-
-        ast::Data::Struct(fields) => {
-            vec![ApiResponseVariant {
-                ident: ident.clone(),
-                error: ops.error,
-                status: ops.status,
-                transparent: false,
-                fields,
-                attrs: ops.attrs,
-
-                is_struct: true,
-            }]
-        }
+    let Some(variants) = ops.data.take_enum() else {
+        return syn::Error::new_spanned(
+            input,
+            "expected enum with #[derive(ApiResponse)] attribute",
+        )
+        .to_compile_error();
     };
 
     for ApiResponseVariant {
@@ -173,15 +154,8 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
         fields: variant_fields,
         error: variant_error,
         attrs: variant_attrs,
-        is_struct,
     } in &variants
     {
-        let variant_self: TokenStream2 = if *is_struct {
-            parse_quote!(Self)
-        } else {
-            parse_quote!(Self::#variant_ident)
-        };
-
         let thiserror_attr = variant_attrs
             .iter()
             .find(|attr| attr.path().is_ident("error"));
@@ -210,11 +184,11 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                     ));
 
                     status_code_match.push(parse_quote! {
-                        #variant_self(ref __field0) => #st_commander::response::ApiResponse::status(__field0)
+                        Self::#variant_ident(ref __field0) => #st_commander::response::ApiResponse::status(__field0)
                     });
 
                     serialize_variants.push(parse_quote! {
-                        #variant_self(ref __field0) => {
+                        Self::#variant_ident(ref __field0) => {
                             _serde::Serialize::serialize(__field0, __serializer)
                         }
                     });
@@ -284,20 +258,20 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
 
         match variant_fields.style {
             Style::Unit => status_code_match.push(parse_quote! {
-                #variant_self => #status
+                Self::#variant_ident => #status
             }),
 
             Style::Tuple => status_code_match.push(parse_quote! {
-                #variant_self(..) => #status
+                Self::#variant_ident(..) => #status
             }),
 
             Style::Struct => status_code_match.push(parse_quote! {
-                #variant_self { .. } => #status
+                Self::#variant_ident { .. } => #status
             }),
         }
 
         // Parse the doc comment for an operation name and description
-        let response_description = variant_attrs
+        let variant_doc = variant_attrs
             .iter()
             .filter(|attr| attr.path().is_ident("doc"))
             .filter_map(|attr| {
@@ -318,23 +292,18 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
             .collect::<Vec<_>>()
             .join("\n\n");
 
-        // Errors are implemented differently
         if variant_error.is_some() || thiserror_attr.is_some() {
+            let variant_name = variant_ident.to_string();
+
             // Either grab the defined error name, or use the varint name in `snake_case`.
-            let err_name = variant_error
+            let error_name = variant_error
                 .as_ref()
-                .and_then(|opts| match opts {
-                    ErrorOptions::Message(_) => None,
-                    ErrorOptions::Expanded { name, .. } => name.clone(),
-                })
+                .and_then(|opts| opts.name.clone())
                 .unwrap_or_else(|| variant_ident.to_string().to_snake_case());
 
             // The message is either the message field of the `error` attribute or the message
             // from thiserror's `#[error]` attribute if it exists.
-            let err_message = match variant_error.as_ref().and_then(|opts| match opts {
-                ErrorOptions::Message(message) => Some(message.clone()),
-                ErrorOptions::Expanded { message, .. } => message.clone(),
-            }) {
+            let error_message = match variant_error.as_ref().and_then(|opts| opts.message.clone()) {
                 Some(message) => message,
                 None => {
                     match thiserror_attr
@@ -362,19 +331,43 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                 }
             };
 
-            let error_name = variant_ident.to_string();
+            let (err_context_field, add_err_context): (Option<Ident>, Option<TokenStream2>) =
+                match variant_fields.style {
+                    Style::Tuple if variant_fields.fields.len() == 1 => {
+                        let VariantField {
+                            ident: field_ident,
+                            ty: field_ty,
+                            attrs: field_attrs,
+                            ..
+                        } = variant_fields.fields.first().unwrap();
 
-            let err_context: Option<TokenStream2> = if *is_struct {
-                Some(parse_quote!(
-                    .property(
-                        "context",
-                        Self::schema().1,
-                    )
-                    .required("context")
-                ))
-            } else {
-                None
-            };
+                        let is_context = field_attrs.iter().any(|attr| {
+                        attr.style == AttrStyle::Outer
+                            && matches!(&attr.meta, syn::Meta::Path(path) if path.is_ident("context"))
+                    });
+
+                        if is_context {
+                            apply_components.push(parse_quote!(
+                                components.schema_from::<#field_ty>();
+                            ));
+
+                            (
+                                field_ident.clone(),
+                                Some(parse_quote! {
+                                    .property(
+                                        "context",
+                                        utoipa::openapi::schema::Ref::from_schema_name(<#field_ty as utoipa::ToSchema>::schema().0)
+                                    )
+                                    .required("context")
+                                }),
+                            )
+                        } else {
+                            (None, None)
+                        }
+                    }
+
+                    _ => (None, None),
+                };
 
             // We want errors to be homogonous, so we don't want to add a component for every
             // possible error type. Instead we add a single component for ApiError and then
@@ -383,12 +376,13 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                 responses.response(
                     #status.as_u16().to_string(),
                     utoipa::openapi::ResponseBuilder::new()
-                        .description(#response_description)
+                        .description(#variant_doc)
                         .content(
                             "application/json",
                             utoipa::openapi::Content::new(utoipa::openapi::schema::Schema::from(
                                 utoipa::openapi::AllOfBuilder::new()
-                                    .title(Some(#error_name))
+                                    .title(Some(#variant_name))
+                                    .description(Some(#variant_doc))
                                     .item(utoipa::openapi::Ref::from_schema_name("ApiError"))
                                     .item(
                                         utoipa::openapi::ObjectBuilder::new()
@@ -396,17 +390,17 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                                                 "error",
                                                 utoipa::openapi::ObjectBuilder::new()
                                                     .schema_type(utoipa::openapi::SchemaType::String)
-                                                    .example(Some(serde_json::json!(#err_name))),
+                                                    .example(Some(serde_json::json!(#error_name))),
                                             )
                                             .required("error")
                                             .property(
                                                 "message",
                                                 utoipa::openapi::ObjectBuilder::new()
                                                     .schema_type(utoipa::openapi::SchemaType::String)
-                                                    .example(Some(serde_json::json!(#err_message))),
+                                                    .example(Some(serde_json::json!(#error_message))),
                                             )
                                             .required("message")
-                                            #err_context
+                                            #add_err_context
                                             .build()
                                     ),
                             )),
@@ -415,14 +409,24 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                 );
             ));
 
+            let with_message: TokenStream2 = if thiserror_attr.is_some() {
+                parse_quote! {
+                    .with_error(err)
+                }
+            } else {
+                parse_quote! {
+                    .with_message(#error_message)
+                }
+            };
+
             match variant_fields.style {
                 Style::Unit => {
                     serialize_variants.push(parse_quote! {
-                        err @ #variant_self => {
+                        err @ Self::#variant_ident => {
                             _serde::Serialize::serialize(
                                 &#st_commander::response::ApiError::new(#status)
-                                    .with_name(#err_name)
-                                    .with_error(err),
+                                    .with_name(#error_name)
+                                    #with_message,
                                 __serializer
                             )
                         }
@@ -430,36 +434,39 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                 }
 
                 Style::Tuple => {
-                    serialize_variants.push(parse_quote! {
-                        err @ #variant_self(..) => {
-                            _serde::Serialize::serialize(
-                                &#st_commander::response::ApiError::new(#status)
-                                    .with_name(#err_name)
-                                    .with_error(err),
-                                __serializer
-                            )
-                        }
-                    });
+                    if err_context_field.is_some() {
+                        serialize_variants.push(parse_quote! {
+                            err @ Self::#variant_ident(ref __field0) => {
+                                _serde::Serialize::serialize(
+                                    &#st_commander::response::ApiError::new(#status)
+                                        .with_name(#error_name)
+                                        #with_message
+                                        .with_context(__field0),
+                                    __serializer
+                                )
+                            }
+                        });
+                    } else {
+                        serialize_variants.push(parse_quote! {
+                            err @ Self::#variant_ident(..) => {
+                                _serde::Serialize::serialize(
+                                    &#st_commander::response::ApiError::new(#status)
+                                        .with_name(#error_name)
+                                        #with_message,
+                                    __serializer
+                                )
+                            }
+                        });
+                    }
                 }
 
-                Style::Struct => {
-                    serialize_variants.push(parse_quote! {
-                        err @ #variant_self { .. } => {
-                            _serde::Serialize::serialize(
-                                &#st_commander::response::ApiError::new(#status)
-                                    .with_name(#err_name)
-                                    .with_message(#err_message),
-                                __serializer
-                            )
-                        }
-                    });
-                }
+                Style::Struct => {}
             }
         } else {
             match variant_fields.style {
                 Style::Unit | Style::Tuple if variant_fields.fields.is_empty() => {
                     serialize_variants.push(parse_quote! {
-                        #variant_self => {
+                        Self::#variant_ident => {
                             _serde::Serialize::serialize(&(), __serializer)
                         }
                     });
@@ -481,7 +488,7 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                             #status.as_u16().to_string(),
                             utoipa::openapi::RefOr::T(
                                 utoipa::openapi::ResponseBuilder::new()
-                                    .description(#response_description)
+                                    .description(#variant_doc)
                                     .content(
                                         "application/json",
                                         utoipa::openapi::Content::new(utoipa::openapi::RefOr::Ref(
@@ -494,7 +501,7 @@ pub fn impl_api_response(input: DeriveInput) -> TokenStream2 {
                     ));
 
                     serialize_variants.push(parse_quote! {
-                        #variant_self(ref __field0) => {
+                        Self::#variant_ident(ref __field0) => {
                             _serde::Serialize::serialize(__field0, __serializer)
                         }
                     });

@@ -6,7 +6,7 @@ mod utils;
 
 use api_response::impl_api_response;
 
-#[proc_macro_derive(ApiResponse, attributes(response, from))]
+#[proc_macro_derive(ApiResponse, attributes(response, from, context))]
 pub fn api_response(input: TokenStream) -> TokenStream {
     impl_api_response(parse_macro_input!(input)).into()
 }

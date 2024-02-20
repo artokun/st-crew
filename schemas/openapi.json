@@ -50,20 +50,11 @@
                       ],
                       "properties": {
                         "context": {
-                          "type": "object",
-                          "description": "The given player was not found.",
-                          "required": [
-                            "uuid"
-                          ],
-                          "properties": {
-                            "uuid": {
-                              "type": "string"
-                            }
-                          }
+                          "$ref": "#/components/schemas/PlayerNotFoundContext"
                         },
                         "error": {
                           "type": "string",
-                          "example": "player_not_found_error"
+                          "example": "not_found"
                         },
                         "message": {
                           "type": "string",
@@ -72,7 +63,8 @@
                       }
                     }
                   ],
-                  "title": "PlayerNotFoundError"
+                  "title": "NotFound",
+                  "description": "The given player was not found."
                 }
               }
             }
@@ -104,7 +96,8 @@
                       }
                     }
                   ],
-                  "title": "Unhandled"
+                  "title": "Unhandled",
+                  "description": "The command was not handled by any system."
                 }
               }
             }
@@ -156,7 +149,8 @@
                       }
                     }
                   ],
-                  "title": "Unhandled"
+                  "title": "Unhandled",
+                  "description": "The command was not handled by any system."
                 }
               }
             }
@@ -256,20 +250,11 @@
                 ],
                 "properties": {
                   "context": {
-                    "type": "object",
-                    "description": "The given player was not found.",
-                    "required": [
-                      "uuid"
-                    ],
-                    "properties": {
-                      "uuid": {
-                        "type": "string"
-                      }
-                    }
+                    "$ref": "#/components/schemas/PlayerNotFoundContext"
                   },
                   "error": {
                     "type": "string",
-                    "example": "player_not_found_error"
+                    "example": "not_found"
                   },
                   "message": {
                     "type": "string",
@@ -278,7 +263,8 @@
                 }
               }
             ],
-            "title": "PlayerNotFoundError"
+            "title": "NotFound",
+            "description": "The given player was not found."
           },
           {
             "allOf": [
@@ -303,7 +289,8 @@
                 }
               }
             ],
-            "title": "Unhandled"
+            "title": "Unhandled",
+            "description": "The command was not handled by any system."
           }
         ],
         "description": "Get information about a player."
@@ -350,7 +337,8 @@
                 }
               }
             ],
-            "title": "Unhandled"
+            "title": "Unhandled",
+            "description": "The command was not handled by any system."
           }
         ]
       },
@@ -361,6 +349,17 @@
         ],
         "properties": {
           "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerNotFoundContext": {
+        "type": "object",
+        "required": [
+          "uuid"
+        ],
+        "properties": {
+          "uuid": {
             "type": "string"
           }
         }

@@ -27,8 +27,13 @@ pub enum GetServerInfoResult {
     #[response(status = OK)]
     Ok(#[from] PlayerInfo),
 
-    #[response(transparent)]
-    NotFound(#[from] PlayerNotFoundError),
+    #[response(status = NOT_FOUND, error(message = "player not found"))]
+    /// The given player was not found.
+    NotFound(
+        #[from]
+        #[context]
+        PlayerNotFoundContext,
+    ),
 
     #[response(transparent)]
     CallError(#[from] CallError),
@@ -39,11 +44,8 @@ pub struct PlayerInfo {
     pub name: String,
 }
 
-#[derive(Debug, thiserror::Error, ToSchema, ApiResponse)]
-/// The given player was not found.
-#[response(status = NOT_FOUND)]
-#[error("player not found")]
-pub struct PlayerNotFoundError {
+#[derive(Debug, ToSchema)]
+pub struct PlayerNotFoundContext {
     pub uuid: String,
 }
 
